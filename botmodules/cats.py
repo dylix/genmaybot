@@ -1,47 +1,26 @@
 import json, urllib.request, urllib.error, urllib.parse, random
-def get_coolmaster(self, e):
-    e.output = "http://i.imgur.com/NhYEMRi.png"
-    return e
-get_coolmaster.command = "!cool"
-
 def get_cat(self, e):
     url = "http://www.reddit.com/r/catpictures+cats/.json"
     e.output = get_redditpics(url)
     return e
 get_cat.command = "!cats"
 
-def get_mixomatosys(self, e):
-    e.output ="i'm not sure hwat you're point is"
-    return e
-get_mixomatosys.command = "!mixy"
-
-
-def get_jeffers(self, e):
-    e.output = "http://i.imgur.com/kalVBHv.jpg"
-    return e
-get_jeffers.command = "!jeffers"
-
-
 def get_dvq(self, e):
     e.output = "http://i.imgur.com/1lq54.jpg"
     return e
 get_dvq.command = "!dvq"
+
+def get_fern(self, e):
+    e.output = "http://i.imgur.com/TNIt1.jpg"
+    return e
+get_fern.command = "!fern"
+
 
 def get_rat(self, e):
     url = "http://www.reddit.com/r/rats/.json"
     e.output = get_redditpics(url)
     return e
 get_rat.command = "!rats"
-
-def get_rip(self, e):
-    e.output = "  ____  ___ ____  \n"
-    e.output += " |  _ \|_ _|  _ \ \n"
-    e.output += " | |_) || || |_) |\n"
-    e.output += " |  _ < | ||  __/ \n"
-    e.output += " |_| \_\___|_|    \n"
-    e.output += "                  \n"
-    return e
-get_rip.command = "!rip"
 
 def get_dog(self, e):
     url = "http://www.reddit.com/r/dogpictures+dogs/.json"
@@ -91,14 +70,43 @@ def get_redditpics(url):
     cats = json.loads(response.decode('utf-8'))
     catlist = []
     for cat in cats['data']['children']:
-        if 'jpg' in cat['data']['url'] or 'imgur.com' in cat['data']['url'] or 'gfycat.com' in cat['data']['url']:
+        if 'jpg' in cat['data']['url'] or 'imgur.com' in cat['data']['url']:
             pic_title = cat['data']['title']
             pic_title = pic_title.replace('\n', '')
             if cat['data']['over_18']:
-                pic_title = "\002NSFW\002 " + pic_title 
+                pic_title = "=NSFW= " + pic_title
             catlist.append(cat['data']['url'] + " - " + pic_title)
-
 
     cats = catlist.pop(random.randint(0, len(catlist) - 1)) + " :: " + catlist.pop(random.randint(0, len(catlist) - 1))
     return cats
+
+def get_roznalos(self, e):
+    e.output = "https://i.imgur.com/KAbGott.jpg"
+    return e
+get_roznalos.command ="!roznalos"
+get_roznalos.helptext = "Poor roznalos!"
+
+def get_gumby(self, e):
+    e.output = "http://imgur.com/Es8FioK"
+    return e
+get_gumby.command ="!gumby"
+get_gumby.helptext = "D'awww!"
+
+def get_grimace(self, e):
+    e.output = "https://i.imgur.com/yyvBaOC.jpg"
+    return e
+get_grimace.command = "!grimace"
+
+
+def faptain(self, e):
+    e.output = "FaptainAwesome to the rescue!"
+    return e
+
+faptain.command = "!fap"
+
+def epoop(self, e):
+    e.output = "https://i.imgflip.com/2el2zw.jpg"
+    return e
+
+epoop.command = "!epon"
 

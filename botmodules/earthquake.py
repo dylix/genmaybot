@@ -35,7 +35,7 @@ def quake_alert():
 
 
 quake_alert.lastquakecheck = ""
-quake_alert.alert = True
+quake_alert.alert = False
 
 
 def get_quake_data():

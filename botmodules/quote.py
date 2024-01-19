@@ -5,6 +5,7 @@ import urllib.parse
 
 #Handles !quote
 g_irc_output = ""
+bot_object = None
 
 def __init__(self):
 	
@@ -13,6 +14,8 @@ def __init__(self):
 	result = c.execute("CREATE TABLE IF NOT EXISTS Quotes (quote TEXT)")
 	conn.commit()
 	c.close()
+	global bot_object
+	bot_object = self
 
 # --- Commands in this module
 
@@ -49,23 +52,19 @@ def command_handler(event, command):
 	#EX: "set http://url1 http://url2 http://url3"
 	words = irc_input.split()
 
-	if(arg_is_present(words)):
+	if arg_is_present(words):
 
 		# ADD <VAL>
 		# "add I'm a hero"
-		if(is_add_arg(words, arg_offset)):
-			if not (set_function_dict[command](words[val_offset:], command)):
+		if is_add_arg(words, arg_offset):
+			if not set_function_dict[command](words[val_offset:], command):
 				add_to_irc_output("\nFailed to add duplicate quote")
 		
-		elif(is_search_arg(words, arg_offset)):
+		elif is_search_arg(words, arg_offset):
 			search_function_dict[command](words[val_offset:], command)
 
 		# ADD
 		# EX: "add"
-		elif(is_arg_without_val(words, arg_offset)):
-			# This eval should be safe, possible values of command are hard coded above.
-			add_to_irc_output(eval(command).helptext)
-
 		# GET <VAL>
 		# EX: "lance_armstrong"
 		else:
@@ -84,13 +83,13 @@ def arg_is_present(words):
 	return len(words)
 
 def is_add_arg(words, offset):
-	return(len(words) >= 2 and words[offset] == quote.addcmd)
+	return len(words) >= 2 and words[offset] == quote.addcmd
 
 def is_search_arg(words, offset):
-	return(len(words) >= 2 and words[offset] == quote.searchcmd)
+	return len(words) >= 2 and words[offset] == quote.searchcmd
 
 def is_arg_without_val(words, offset):
-	return(len(words) == 1 and words[offset] == quote.addcmd)
+	return len(words) == 1 and words[offset] == quote.addcmd
 
 def store_string(words, command):
 	string = ""
@@ -101,7 +100,7 @@ def store_string(words, command):
 		for word in words:
 			string += word
 			string += space
-			#print("DEBUG: adding " + word)
+			#self.logger.debug("DEBUG: adding " + word)
 	else:
 		string = words
 
@@ -122,7 +121,7 @@ def search_string(words, command):
 		for word in words:
 			search_string += word
 			search_string += space
-			#print("DEBUG: adding " + word)
+			#self.logger.debug("DEBUG: adding " + word)
 	else:
 		search_string = words
 
@@ -147,8 +146,8 @@ def get_string(command):
 
 	#Found one
 	else:
-		while(string == quote.last_quote):
-			print("DEBUG: Same as last quote, fetch another one")
+		while string == quote.last_quote:
+			bot_object.logger.debug("DEBUG: Same as last quote, fetch another one")
 			string = sql_get_random_value_from_command(command)
 
 		add_to_irc_output("\n" + command + ": " + string)
@@ -165,22 +164,22 @@ def sql_insert_or_update(table, value):
 	#New user
 	query = "SELECT %s from Quotes WHERE Quote=?" % table
 	result = c.execute(query, (value,)).fetchone() 
-	#result = c.execute("SELECT quote FROM Quotes WHERE quote=?", (value,)).fetchone() 
+
 	if result == None:
 		# Not a duplicate quote (hahah) insert it
-		print("DEBUG: New quote, inserting: " + value)
+		bot_object.logger.debug("DEBUG: New quote, inserting: " + value)
 
 		query = "INSERT INTO Quotes (%s) VALUES (?)" % table
 		result = c.execute(query, (value,))
 
 		if not result:
-			print("DEBUG: Failed to insert value")
+			bot_object.logger.debug("DEBUG: Failed to insert value")
 
 		conn.commit()
 
-		print("Current db state: ")
+		bot_object.logger.debug("Current db state: ")
 		for row in c.execute("SELECT * FROM Quotes"):
-			print(row)
+			bot_object.logger.debug(row)
 
 		c.close()
 	else:

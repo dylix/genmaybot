@@ -6,26 +6,35 @@ import gzip
 
 
 def get_rt(self, e):
-    url = "http://api.flixster.com/android/api/v14/movies.json?cbr=1&filter={}"
-    url = url.format(urllib.parse.quote(e.input))
+    url = self.tools['google_url']("site:imdb.com inurl:com/title " + e.input, "imdb.com/title/tt\\d{7}/")
+    imdbid = re.search("tt\\d{7}", url).group(0)[2:]
+
+    url = "http://api.rottentomatoes.com/api/public/v1.0/movie_alias.json?id={}&type=imdb&apikey={}"
+    url = url.format(imdbid, self.botconfig["APIkeys"]["rtAPIkey"])
+
     movie = loadjson(url)
-    flxurl = "http://api.flixster.com/android/api/v1/movies/{}.json".format(movie[0]['id'])
-    movie = loadjson(flxurl)
+    if 'error' in movie:
+        # our IMDB serach didn't work, so lets try rt's normally-useless search
+        url = "http://api.rottentomatoes.com/api/public/v1.0/movies.json?q={}&page_limit=1&page=1&apikey={}"
+        url = url.format(urllib.parse.quote(e.input), self.botconfig["APIkeys"]["rtAPIkey"])
+        results = loadjson(url)
+        url = "http://api.rottentomatoes.com/api/public/v1.0/movies/{}.json?apikey={}"
+        url = url.format(results['movies'][0]['id'], self.botconfig["APIkeys"]["rtAPIkey"])
+        movie = loadjson(url)
 
-    url = self.tools['shorten_url'](movie['urls'][2]['url'])
-
-    concensus = movie['reviews']['rottenTomatoes']['consensus']
-    concensus = "- " + self.tools['remove_html_tags'](concensus)
-
+    concensus = ""
+    if 'critics_consensus' in movie:
+        concensus = "- " + movie['critics_consensus']
+    url = self.tools['shorten_url'](movie['links']['alternate'])
     e.output = "%s (%s) - Critics: %s - Users: %s %s [ %s ]" % (movie['title'],
-                                                                str(movie['theaterReleaseDate']['year']),
-                                                                str(movie['reviews']['rottenTomatoes']['rating']),
-                                                                str(movie['reviews']['flixster']['popcornScore']),
+                                                                str(movie['year']),
+                                                                str(movie['ratings']['critics_score']),
+                                                                str(movie['ratings']['audience_score']),
                                                                 concensus,
                                                                 url)
-
     return e
 get_rt.command = "!rt"
+
 
 def loadjson(url):
     response = urllib.request.urlopen(url).read()
@@ -34,5 +43,5 @@ def loadjson(url):
         response = gzip.decompress(response)
     except:
         pass
-    response = response.decode("utf-8", "replace")
+    response = response.decode("utf-8")
     return json.loads(response)

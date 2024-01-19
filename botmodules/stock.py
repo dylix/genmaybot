@@ -1,12 +1,9 @@
 import urllib.request, urllib.error, urllib.parse, csv, json# ,locale
-#try:
-#    locale.setlocale(locale.LC_ALL, 'English_United States')
-#except:
-#    locale.setlocale(locale.LC_ALL, 'en_US')
 
 def get_stock_quote(self, e):
     # stock quotes from Yahoo Finance
-    
+    if not e.input:
+        return
       
     opener = urllib.request.build_opener()
     opener.addheaders = [('User-Agent',"Opera/9.10 (YourMom 8.0)")]
@@ -27,7 +24,7 @@ def get_stock_quote(self, e):
        name = name.replace('"','')
     
        if change != "N/A":
-           change = change + ' ({0:.2%})'.format((float(change)/(float(price) - float(change))))
+           change = change + ' ({0:.2%})'.format(float(change)/(float(price) - float(change)))
        if volume != "N/A" and avg_volume != "N/A":
            volume = '{0:n}'.format(int(volume))
            avg_volume = '{0:n}'.format(int(avg_volume))

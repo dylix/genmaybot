@@ -27,3 +27,7 @@ Remember to set your API keys and ident password in the .cfg
 
 This bot is created as a learning project, and may not be suitable for production environments.
 No warranties or guarantees are given. The creators take no responsibilty for damage/attacks/etc.
+
+pastebinapi
+https://github.com/venaxyt/pastebinapi
+pip install pastebinapi

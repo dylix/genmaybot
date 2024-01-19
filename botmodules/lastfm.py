@@ -2,7 +2,6 @@
 import sqlite3
 import urllib
 import json
-#import time
 
 
 def setlastfmuser(self, e):
@@ -23,16 +22,23 @@ Sets your last.fm username so you can use the !np and !compare commands without 
 def nowplaying(self, e):
     conn = sqlite3.connect('lastfm.sqlite')
     c = conn.cursor()
-    if e.input:
-        lastfmuser = c.execute("SELECT lastfmuser FROM lastfm WHERE user = LOWER(?)", [e.input]).fetchone()
-        if not lastfmuser:
-            lastfmuser = [e.input]
-    else:
-        lastfmuser = c.execute("SELECT lastfmuser FROM lastfm WHERE user = LOWER(?)", [e.nick]).fetchone()
+    try:
+        if e.input:
+            lastfmuser = c.execute("SELECT lastfmuser FROM lastfm WHERE user = LOWER(?)", [e.input]).fetchone()
+            if not lastfmuser:
+                lastfmuser = [e.input]
+        else:
+            lastfmuser = c.execute("SELECT lastfmuser FROM lastfm WHERE user = LOWER(?)", [e.nick]).fetchone()
+    except sqlite3.OperationalError:
+        self.logger.info("Defaulting last.fm username to nickname for {} and retrying.".format(e.nick))
+        e.input = e.nick
+        setlastfmuser(self, e)
+        return nowplaying(self,e)
 
     if lastfmuser:
         lastfmuser = lastfmuser[0]
         url = "http://ws.audioscrobbler.com/2.0/?api_key=%s&limit=1&format=json&method=user.getRecentTracks&user=%s" % (self.botconfig["APIkeys"]["lastfmAPIkey"], lastfmuser)
+        print ("Getting lastfm url: {}".format(url))
         response = urllib.request.urlopen(url).read().decode('utf-8')
         track = json.loads(response)
         try:
@@ -45,7 +51,7 @@ def nowplaying(self, e):
             except:
                 pass
             try:
-                dmin, dsec = divmod((int(trackinfo['duration']) / 1000), 60)
+                dmin, dsec = divmod(int(trackinfo['duration']) / 1000, 60)
                 duration = " [{:.0f}:{:02.0f}]".format(dmin, dsec)
             except:
                 duration = ""
@@ -61,8 +67,8 @@ def nowplaying(self, e):
             except:
                 genres = ""
             try:
-                yt = self.tools['google_url']('site:youtube.com %s - %s' % (artist, trackname), 'watch\?v=')
-                yt = yt[yt.find("?v=") + 3:]
+                yt = self.tools['google_url']('site:youtube.com %s - %s' % (artist, trackname), 'watch%3Fv%3D')
+                yt = yt[yt.find("%3Fv%3D") + 7:]
                 yt = " - http://youtu.be/" + yt
             except:
                 yt = ""
@@ -73,8 +79,8 @@ def nowplaying(self, e):
             trackname = track['recenttracks']['track']['name']
             played = track['recenttracks']['track']['date']['#text']
             try:
-                yt = self.tools['google_url']('site:youtube.com %s - %s' % (artist, trackname), 'watch\?v=')
-                yt = yt[yt.find("?v=") + 3:]
+                yt = self.tools['google_url']('site:youtube.com %s - %s' % (artist, trackname), 'watch%3Fv%3D')
+                yt = yt[yt.find("%3Fv%3D") + 7:]
                 yt = " - http://youtu.be/" + yt
             except:
                 yt = ""
@@ -88,12 +94,6 @@ nowplaying.helptext = """Usage: !np or !np <last.fm username/IRC nick>
 Example: !np
 Shows your currently playing trak on last.fm. To use !np without arguments your username must be set up first with !setlastfm"""
 
-#def np(self, e):
-#    self.irccontext.privmsg("Angstserv", "deprotect {} {}".format(e.source, e.nick))
-#    time.sleep(1)
-#    self.irccontext.mode(e.source, '+b {}'.format(e.hostmask))
-#    self.irccontext.kick(e.source, e.nick, "Congratulations! You found the word of the day, courtesy of !np")
-#np.command = "!np"
 
 def get_trackinfo(apikey, artist, trackname, userid):
     artist = urllib.parse.quote(artist)
@@ -101,7 +101,7 @@ def get_trackinfo(apikey, artist, trackname, userid):
     url = "http://ws.audioscrobbler.com/2.0/?api_key=%s&format=json&method=track.getInfo&artist=%s&track=%s&username=%s" % (apikey, artist, trackname, userid)
     response = urllib.request.urlopen(url).read().decode('utf-8')
     track = json.loads(response)
-#    print(track)
+#    self.logger.debug(track)
     return track['track']
 
 def compare(self, e):
@@ -155,7 +155,7 @@ def compare(self, e):
         e.output = "Matching %s and %s :: Score: %s - Artists (%s matches): %s" % (user1, user2, score, artistmatches, artists)
 
     return e
-compare.command = "!compare"
+compare.command = "!lastfmcompare"
 compare.helptext = """Usage: !compare <last.fm user/IRC nick> or !compare <last.fm username/IRC nick #1> <last.fm username/IRC nick #2>
 Example: !compare jbieber jeffers
 Compares your last.fm musical tastes with another user. A single argument compares your !setlastfm user with the specified user, 2 arguments compares the specified users."""

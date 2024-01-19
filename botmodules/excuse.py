@@ -1,0 +1,17 @@
+import random
+
+def excuse_parent(self, e):
+    intro = ["Sorry I can't come, ", "Please forgive my absence, ", "This is going to sound crazy but, ", "Get this : ", "I can't go because, ", "I know you are going to hate me but, ", "I was minding my own business and boom, ", "I feel terrible but, ", "I regretfully can't attend, ", "This is going to sound like an excuse but, ", "See.. what had happened was.. "]
+    scapegoat = ["mercury retrograde ", "the gremlins in the server ", "alien interference ", "a glitch in the matrix ", "time-traveling squirrels ", "the cosmic alignment of celestial bodies ", "quantum fluctuations ", "an unexpected black hole in the code ", "interdimensional interference ", "a mischievous AI ", "the ghost of outdated documentation ", "greedy unicorns consuming bandwidth ", "invasive parallel universe bugs ", "the invisible ninja programmer ", "a curse from a disgruntled wizard ", "a hiccup in the space-time continuum ", "a swarm of code-eating butterflies ", "parallel processing paradox ", "a time-traveling coffee spill ", "my bike seat ", "my nephew ", "the ghost of Hitler ", "Frisko ", "Macuser ", "spangborn ", "the Pope ", "my ex ", "a high school marching band ", "Bill Gates ", "a sad clown ", "the kid from Home Alone ", "a professional Cricket team ", "my Tinder date "]
+    delay = ["gave me a back injury.", "is updating my resume.", "just hurt my knee.", "just shit my bed.", "died in front of me.", "won't stop telling me knock knock jokes.", "started having a nervous breakdown.", "gave me Syphilis.", "poured lemonade in my gas tank.", "stabbed me.", "found my box of human teeth.", "stole my bicycle.", "posted my childhood photos on Instagram.", "pet rock needs a spa day.", "accidentally joined a circus as a clown trainee.", "was stuck in a time loop watching cat videos.", "alarm clock is on a coffee break.", "sunspots disrupting communication ","is allergic to responsibilities today.", "is on strike and demanding better working conditions.", "is attending a secret society meeting of procrastinators.", "is debugging life, please hold.", "is on a quest to find the lost city of WiFi signal.", "stole my motivation.", " is on vacation, and forgot to leave a note.", "is participating in a highly competitive staring contest with my cat.", "said my horoscope told me to avoid commitments today.", "is on a top-secret mission to decode ancient hieroglyphs from cereal box.", "is practicing ninja skills in the art of avoiding responsibilities.", "is marathoning a TV show about productivity, ironically.", "is trapped in a parallel universe where time moves slower.", "is testing the theory that work expands to fill the time available.", "is in a staring contest with the computer screen, and it's winning.", "is consulting magic eight ball for important life decisions."]
+    #a = random.randint(0, len(intro)-1)
+    #b = random.randint(0, len(scapegoat)-1)
+    #c = random.randint(0, len(delay)-1)
+    a = random.randrange(0, len(intro))
+    b = random.randrange(0, len(scapegoat))
+    c = random.randrange(0, len(delay))
+    e.output = intro[a] + scapegoat[b] + delay[c]
+    return e
+    
+excuse_parent.command = "!excuse"
+#excuse_gen.helptext = "!excuse - need an excuse not to ride your bike but you dont have Frisko level excuse making capabilities? No problem, I got you fam."

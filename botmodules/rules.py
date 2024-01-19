@@ -1,5 +1,4 @@
 import random
-
 rules = { 1: "Obey the Rules", 2: "Lead by example", 3: "Guide the uninitiated",
           4: "It's all about the bike", 5: "Harden the fuck up",
           6: "Free your mind and your legs will follow.",
@@ -72,23 +71,29 @@ rules = { 1: "Obey the Rules", 2: "Lead by example", 3: "Guide the uninitiated",
           "head."
  }
 
-def getRule(self, e):
-     if e.input:
-          if isIntegerValue(e.input) and int(e.input) >= 1 and int(e.input) <= len(rules):
-               e.output = "Rule #"+str(e.input)+": "+rules[int(e.input)]
-          else:
-               e.output = "Stop making up rules, brah."
-     else:
-          random_rule = random.randint(1, len(rules))
-          e.output = "Rule #"+str(random_rule)+": "+rules[random_rule]
-     return e
-     
-def isIntegerValue(v):
-     try:
-          int(v)
-          return True
-     except ValueError:
-          return False
 
-getRule.command = "!rule"
-getRule.helptext = "!rule <RuleID> : Shows the corresponding velominati rule."
+def get_rule(self, e):
+    if e.input:
+        try:
+            rule_num = int(e.input)
+        except ValueError:
+            rule_num = 0
+
+        ## Valid Rule
+        if rule_num > 0 and rule_num <= len(rules):
+            e.output = "Rule %d: %s" % (rule_num, rules[rule_num])
+
+        ## Invalid Rule
+        else:
+            e.output = "Invalid rule ID. Please enter 1-%s" % str(len(rules))
+
+    ## Random Rule
+    else:
+        rule_num = random.randint(1,len(rules))
+        e.output = "Rule %d: %s" % (rule_num, rules[rule_num])
+
+    return e
+
+
+get_rule.command = "!rule"
+get_rule.helptext = "!rule <RuleID> : Shows the corresponding velominati rule."

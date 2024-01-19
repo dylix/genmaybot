@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import re
 import hashlib
 import datetime
@@ -7,20 +5,29 @@ import sqlite3
 
 
 def url_parser(self, e):
+
     url = re.search(r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>])*\))+(?:\(([^\s()<>])*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))", e.input)
     #http://daringfireball.net/2010/07/improved_regex_for_matching_urls
     if url:
+        
+        #jmaister is a fun hating nazi op who enjoys looking at dead cyclists
+        #if "duck" in e.nick.lower():
+        #    e.output="shut your fuck {}".format(e.nick)
+        #    return e
+        
         url = url.group(0)
         if url[0:4].lower() != "http":
             url = "http://" + url
         e.input = url
-        return url_posted(self, e)
+        
+        title = url_posted(self,e)
+        return None #url_posted(self, e)
     else:
         return None
 url_parser.lineparser = True
 
 
-def url_posted(self, e):
+def url_posted(self, e, titlecall=False):
     url = e.input
     #checks if the URL is a dupe (if mysql is enabled)
     #detects if a wikipedia or imdb url is posted and does the appropriate command for it
@@ -36,10 +43,11 @@ def url_posted(self, e):
         cursor.execute('''CREATE TABLE 'links' ("url" tinytext, "hash" char(56) NOT NULL UNIQUE, "reposted" smallint(5) default '0', "timestamp" timestamp NOT NULL default CURRENT_TIMESTAMP);''')
         cursor.execute('''CREATE INDEX "links_hash" ON 'links' ("hash");''')
 
-    query = "SELECT reposted, timestamp FROM links WHERE hash='%s'" % urlhash
+    query = "SELECT reposted, timestamp, url FROM links WHERE hash='%s'" % urlhash
     result = cursor.execute(query)
     result = cursor.fetchone()
-    if result:
+    if result and result[0] != 0:
+        url = result[2]
         repost = "LOL REPOST %s " % (result[0] + 1)
 
         orig = datetime.datetime.strptime(result[1], "%Y-%m-%d %H:%M:%S")
@@ -90,7 +98,17 @@ def url_posted(self, e):
             title = trope.output
     except:
         pass
-    if url.find("imgur.com") != -1 and url.find("/a/") == -1 and "/gallery/" not in url:
+
+    if not titlecall:
+        cursor.execute("""UPDATE OR IGNORE links SET reposted=reposted+1 WHERE hash = ?""", [urlhash])
+
+
+
+
+    cursor.execute("""INSERT OR IGNORE INTO links(url, hash) VALUES (?,?)""", (url, urlhash))
+    conn.commit()
+
+    if url.find("imgur.com") != -1 and url.find("/a/") == -1:
         imgurid = url[url.rfind('/') + 1:]
         if "." in imgurid:
             imgurid = imgurid[:imgurid.rfind('.')]
@@ -103,17 +121,18 @@ def url_posted(self, e):
         title = get_title(self, e, url)
 
     if title:
-        if "imgur:" in title.lower():
+        if title.find("imgur: the simple") != -1:
             title = ""
         title = title.replace("\n", " ")
         title = re.sub('\s+', ' ', title)
         title = re.sub('(?i)whatsisname', '', title)
 
-        cursor.execute("""UPDATE OR IGNORE links SET reposted=reposted+1 WHERE hash = ?""", [urlhash])
-        cursor.execute("""INSERT OR IGNORE INTO links(url, hash) VALUES (?,?)""", (url, urlhash))
-        conn.commit()
+    if not titlecall:
+        url = ""
+    else:
+        url = " ( {} )".format(url)
 
-        e.output = "%s%s%s" % (repost, title, days)
+        e.output = "%s%s%s%s" % (repost, title, days, url)
 
     conn.close()
 
@@ -124,10 +143,11 @@ def get_title(self, e, url):
     length = 51200
     if url.find("amazon.") != -1:
         length = 100096  # because amazon is coded like shit
-    page = self.tools["load_html_from_URL"](url, length)
+    page = self.tools["load_html_from_url"](url, length)
     title = ""
     meta_title = ""
 
+    
     if page and page.find('meta', attrs={'name': "generator", 'content': re.compile("MediaWiki", re.I)}):
         try:
             wiki = self.bangcommands["!wiki"](self, e, True, True)
@@ -135,31 +155,67 @@ def get_title(self, e, url):
         except:
             pass
     elif page:
-        title = "Title: " + page.find('title').string
         try:
-            meta_title = "Title: " + page.find('meta', attrs={'property': "og:title"}).get("content")
+            title = "Title: " + page.find('title').string
         except:
-            meta_title = ""
+            pass
+
+        try:
+            title = "Title: " + page.find('meta', attrs={'property': "og:title"}).get("content")
+        except:
+            pass
         
         
-    if meta_title:
-        return meta_title
-    else:
         return title
 
 
-def last_link(self, e):
-    #displays last link posted (requires mysql)
+
+def last_title(self, e):
+    #displays the title of the last link posted (requires sql)
     conn = sqlite3.connect("links.sqlite")
     cursor = conn.cursor()
     if cursor.execute("SELECT url FROM links ORDER BY rowid DESC LIMIT 1"):
         result = cursor.fetchone()
         url = result[0]
-
+        e.input = url
     conn.close()
-    e.output = "[ " + url + " ] " + get_title(self, e, url)
+    
+    return url_posted(self, e, True)
+
+last_title.command = "!title"
+last_title.helptext = "Usage: !title\nShows the title of the last URL that was posted in the channel"
+
+
+    
+def last_link(self, e):
+    #displays the title of the last link posted (requires sql)
+    conn = sqlite3.connect("links.sqlite")
+    cursor = conn.cursor()
+    if cursor.execute("SELECT url FROM links ORDER BY rowid DESC LIMIT 1"):
+        result = cursor.fetchone()
+        url = result[0]
+    conn.close()
+    e.output = url
     return e
 
 last_link.command = "!lastlink"
-last_link.helptext = "Usage: \002!lastlink\002" \
-                     "Shows the last URL that was posted in the channel"
+last_link.helptext = "Usage: !lastlink\nShows the last URL that was posted in the channel"
+
+class TestEvent(object):
+    input = "https://snoonet.org/"
+    output = ""
+
+
+if __name__ == "__main__":
+    import tools as tools_module
+
+    testevent = TestEvent()
+    testevent.tools = tools_module.__dict__
+    print("Testing url_parser with URL: {}".format(testevent.input))
+    url_parser(testevent, testevent)
+
+    print("Testing last_link with URL: {}".format(testevent.input))
+    print("last_link returned: {}".format(last_link(testevent, testevent).output))
+    print("last_title returned: {}".format(last_title(testevent, testevent).output))
+
+

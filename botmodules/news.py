@@ -11,7 +11,7 @@ def get_newest_rss(self, url):
     dom = xml.dom.minidom.parse(urllib.request.urlopen(url))
     newest_news = dom.getElementsByTagName('item')[0]
     title = newest_news.getElementsByTagName('title')[0].childNodes[0].data
-    description = BeautifulSoup(newest_news.getElementsByTagName('description')[0].childNodes[0].data)
+    description = BeautifulSoup(newest_news.getElementsByTagName('description')[0].childNodes[0].data, "html.parser")
 
     updated = dom.getElementsByTagName('pubDate')[0].childNodes[0].data
     updated = datetime.datetime.fromtimestamp(time.mktime(parsedate(updated)))
@@ -32,7 +32,6 @@ def get_newest_rss(self, url):
     description = description.replace("\n", "")
 
     description = self.tools['remove_html_tags'](description)
-    #description = description[0:len(description) - 9]
     description = description.strip()
     if description.rfind(".") != -1:
         description = description[0:description.rfind(".") + 1]
@@ -48,9 +47,10 @@ def google_news(self, e):
     query = urllib.parse.quote(e.input)
     url = ""
     if not query:
-        url = "http://news.google.com/news?ned=us&topic=h&output=rss"
+        url = "https://news.google.com/news/rss/?gl=US&ned=us&hl=en"
+
     else:
-        url = "http://news.google.com/news?q=%s&output=rss" % query
+        url = "https://news.google.com/news/rss/search/section/q/%s/?hl=en&gl=US&ned=us" % query
 
     description, updated, ago = get_newest_rss(self,url)
 
@@ -115,8 +115,8 @@ def npr_music(self, e):
 
     title = musicdata['title']['$text']
     e.output = "%s - %s [ %s ]" % (title,teaser,link)
-    e.output = e.output.replace("<em>","")
-    e.output = e.output.replace("</em>","")
+    e.output = e.output.replace("<em>","'")
+    e.output = e.output.replace("</em>","'")
     e.output = e.output.replace("First Listen: ","") #Unnecessary spam
 
     return e

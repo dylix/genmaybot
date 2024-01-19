@@ -1,5 +1,6 @@
 import urllib.parse
 import re
+import html
 
 
 def get_urbandictionary(self, e):
@@ -7,11 +8,11 @@ def get_urbandictionary(self, e):
     
     #super smrt AI code to tell if you want a different definition
     #We only get the first 7 results.
-    number = re.search("[1-7]", searchterm[0:1])
+    number = re.search("-[1-7]", searchterm[0:2])
     if number and len(searchterm.split(" ")) > 1:
-       searchterm = searchterm[2:]
-       number = int(number.group(0)[0:1]) - 1
-       print(number)
+       searchterm = searchterm[3:]
+       number = int(number.group(0)[1:2]) - 1
+       self.logger.debug(number)
     else:
        number = 0
 
@@ -24,7 +25,7 @@ def get_urbandictionary(self, e):
     if searchterm == "":
         url = "http://www.urbandictionary.com/random.php"
 
-    page, url = self.tools["load_html_from_URL"](url, returnurl=True)
+    page, url = self.tools["load_html_from_url"](url, returnurl=True)
 
     first_definition = ""
 
@@ -39,16 +40,16 @@ def get_urbandictionary(self, e):
         if content.string is not None:
             first_definition += content.string
 
-    #first_definition = first_definition.encode("utf-8", 'ignore')
-#    first_definition = tools.decode_htmlentities(first_definition)
-#    first_word = tools.decode_htmlentities(first_word)
 
     first_definition = first_definition.replace("\n", " ")
     first_definition = first_definition.replace("\r", " ")
     first_definition = first_definition[0:392]
 
-    first_definition = ((first_word + ": " + first_definition) + " [ %s ]" % self.tools['shorten_url'](url))
-    #print first_definition
+    first_word = html.unescape(first_word)
+    first_definition = html.unescape(first_definition)
+    
+    first_definition = first_word + ": " + first_definition + " [ %s ]" % self.tools['shorten_url'](url)
+
     e.output = first_definition
     return e
 
@@ -63,7 +64,7 @@ Shows urbandictionary definition of a word or phrase.
 def get_urbandictionary_wotd(self):
 
     url = "http://www.urbandictionary.com"
-    page = self.tools["load_html_from_URL"](url)
+    page = self.tools["load_html_from_url"](url)
     first_definition = ""
 
     first_word = page.findAll('a', attrs={"class": "word"})[0].string
@@ -73,9 +74,11 @@ def get_urbandictionary_wotd(self):
         if content.string is not None:
             first_definition += content.string
 
-#    first_definition = tools.decode_htmlentities(first_definition)
     first_definition = first_definition.replace("\n", " ")
-
-    wotd = (first_word.decode('utf-8') + ": " + first_definition + " [ %s ]" % self.tools['shorten_url'](url))
+    
+    first_word = html.unescape(first_word)
+    first_definition = html.unescape(first_definition)
+    
+    wotd = first_word.decode('utf-8') + ": " + first_definition + " [ %s ]" % self.tools['shorten_url'](url)
 
     return wotd

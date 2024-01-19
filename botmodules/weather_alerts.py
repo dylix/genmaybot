@@ -11,7 +11,7 @@ def weather_alert():
       weather_alert.lastcheck = latest_update
     if latest_update > weather_alert.lastcheck:
       weather_alert.lastcheck = latest_update
-      return get_weather_alert_data(alert_url)
+      return get_weather_alert_data(self, alert_url)
 
   except Exception as inst:
     print("weather_alert: " + str(inst))
@@ -20,9 +20,9 @@ def weather_alert():
 #weather_alert.alert=True
 weather_alert.lastcheck=""
 
-def find_latest_weather_alert():
+def find_latest_weather_alert(self):
   try:
-    request = urllib.request.urlopen("http://alerts.weather.gov/cap/us.php?x=1")
+    request = urllib.request.urlopen("http://alerts.weather.gov/cap/us.php?x=0")
     dom = xml.dom.minidom.parse(request)
     latest_update = datetime.datetime(1970,1,1) ## for comparing against the latest weather entry
 
@@ -40,7 +40,7 @@ def find_latest_weather_alert():
       cur_entry+=1
 
       ## only get the latest immediate and severe alerts, too much spam otherwise
-      if latest_update < updated and urgency=="Immediate" and severity=="Severe":
+      if latest_update < updated and urgency=="Expected" and severity=="Severe":
         latest_update = updated
         latest_entry = cur_entry
         alert_url = entry.getElementsByTagName('id')[0].childNodes[0].data
@@ -51,7 +51,7 @@ def find_latest_weather_alert():
     pass
 
 
-def get_weather_alert_data(alert_url):
+def get_weather_alert_data(self, alert_url):
   try:
     request = urllib.request.urlopen(alert_url)
     dom = xml.dom.minidom.parse(request)
@@ -74,10 +74,10 @@ def get_weather_alert_data(alert_url):
     updated = dom.getElementsByTagName('effective')[0].childNodes[0].data
     updated = dateparser(updated)
     updated = (updated - updated.utcoffset()).replace(tzinfo=None)
-    ago = (datetime.datetime.utcnow() - updated).seconds/60
+    ago = int((datetime.datetime.utcnow() - updated).seconds/60)
 
 
-    short_url = tools.shorten_url(alert_url)
+    short_url = self.tools['shorten_url'](alert_url)
     ## old text, too verbose
     ##alert_text = "[%s] %s: %s Urgency: %s Severity: %s Certainty: %s | %s (%s minutes ago)" % (senderName, msgType, event, urgency, severity, certainty, note[0:170], ago)
     ## new text is self limiting to the IRC limit of 428 characters
@@ -95,8 +95,8 @@ def get_weather_alert_data(alert_url):
 
 def get_weather_alert(self, e):
 ## find latest weather alert and displays it
-  latest_update, latest_entry, alert_url = find_latest_weather_alert()
-  e.output = get_weather_alert_data(alert_url)
+  latest_update, latest_entry, alert_url = find_latest_weather_alert(self)
+  e.output = get_weather_alert_data(self, alert_url)
   return e
 
 get_weather_alert.command = "!nws"

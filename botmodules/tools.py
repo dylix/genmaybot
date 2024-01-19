@@ -3,7 +3,8 @@ from html.entities import name2codepoint as n2cp
 from bs4 import BeautifulSoup
 import encodings.idna
 import datetime
-
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
 def __init__(self):
     google_url.self = self
@@ -32,6 +33,14 @@ def decode_htmlentities(string):
     entity_re = re.compile("&(#?)(x?)(\w+);")
     return entity_re.subn(substitute_entity, string)[0]
 
+def insert_newline(original_string):
+    interval = 360
+    character_to_insert = '\n'
+    modified_string = ''
+    for i in range(0, len(original_string), interval):
+        print("i",i," orig:",len(original_string))
+        modified_string += original_string[i:i+interval] + character_to_insert
+    return modified_string
 
 def substitute_entity(match):
   try:
@@ -86,8 +95,10 @@ def google_url(searchterm, regexstring):
     return
 
 
-def load_html_from_URL(url, readlength="", returnurl=False):
+def load_html_from_url(url, readlength="", returnurl=False):
+    #print("url:",url)
     url = fixurl(url)
+    #print("fixurl:",url)
     opener = urllib.request.build_opener()
 
     opener.addheaders = [('User-Agent', "Opera/9.10 (YourMom 8.0)")]
@@ -100,25 +111,119 @@ def load_html_from_URL(url, readlength="", returnurl=False):
             page = pagetmp.read(int(readlength))
         else:
             page = pagetmp.read()
-        page = BeautifulSoup(page)
+        page = BeautifulSoup(page, features='html.parser')
     opener.close()
     if returnurl:
         return page, url
     return page
 
+def findLatLong(location=""):
+    if location.isdigit():
+        with open("us-zip-code-latitude-and-longitude.json", "r") as f:
+            cities = json.loads(f.read())
+        city = [item for item in cities if item['fields']['zip'] == location]
+        #print(city['fields']["city"])
+        
+        try:
+            return city[0]['fields']['city'] + ", " + city[0]['fields']['state'], city[0]['fields']['latitude'], city[0]['fields']['longitude'], "US"
+        except Exception as e:
+            print(e)
+            pass
+    else:
+        with open("city.list.json", "r") as f:
+            cities = json.loads(f.read())
+    #city = next((item for item in cities if item["name"].lower() == location.split(',')[0].lower()), None)
+    city = [item for item in cities if item["name"].lower() == location.split(',')[0].lower()]
+    for result in city:
+        try:
+            if result["state"].lower() == location.split(',')[1].lower().strip():
+                city=result
+                break
+            elif result["country"].lower() == location.split(',')[1].lower().strip():
+                city=result
+                break
+            
+        except Exception as e:
+            #city=result
+            #print("first if ", e)
+            break
+
+    #print("before second ", city)
+    #print(len(city))
+    if len(city) > 5 or not city:
+        try:
+            city = [item for item in cities if item["name"].lower() == location.rsplit(' ', 1)[0].lower() and item["country"].lower() == location.rsplit(' ', 1)[1].lower()]
+        except:
+            city = [item for item in cities if item["name"].lower() == location.rsplit(' ', 1)[0].lower() and item["country"] == "US"]
+        #print("before not city ", city)
+        if not city:
+            city = [item for item in cities if item["name"].lower() == location.lower() and item["country"] == "US"]
+        for result in city:
+            try:
+                if result["state"].lower() == location.rsplit(' ', 1)[-1].lower().strip():
+                    city=result
+                    break
+            except Exception as e:
+                #city=result
+                #print("second if ", e)
+                break
+    #print("\n\nAfter second ", city)
+
+    if len(city) > 5 or not city:
+        city = [item for item in cities if item["name"].lower() == location.rsplit(' ', 1)[0].lower()]
+        #print("second list of city ", city)
+        for result in city:
+            try:
+                if result["state"].lower() == location.rsplit(' ', 1)[-1].lower().strip():
+                    city=result
+                    break
+            except Exception as e:
+                #print("third if ", e)
+                #city=result
+                break
+    try:
+        if (len(city) > 0):
+            city=city[0]
+    except:
+        pass
+    if city:
+        if (city["country"] == "US"):
+            return city["name"] + ", " + city["state"], city["coord"]["lat"], city["coord"]["lon"],city["country"]
+        else:
+            return city["name"] + ", " + city["country"], city["coord"]["lat"], city["coord"]["lon"],city["country"]
+    return None
 
 def shorten_url(url):
     #goo.gl url shortening service, not used directly but used by some commands
   try:
-    key = bot_object.botconfig["APIkeys"]["shorturlkey"]
-    values = json.dumps({'long_url': url})
-    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {}'.format(key)}
-    request_url = "https://api-ssl.bitly.com/v4/shorten"
-    req = urllib.request.Request(request_url, values.encode(), headers)
+    key = google_url.self.botconfig["APIkeys"]["yourlsAPIkey"]
+    values = {'url': url, 'action': 'shorturl', 'format': 'json', 'signature': key}
+    data = urllib.parse.urlencode(values)
+    data = data.encode('ascii') # data should be bytes
+    #headers = {'Content-Type': 'application/json'}
+    request_url = "https://dylix.org/yourls/yourls-api.php"
+    #req = urllib.request.Request(request_url, values.encode(), headers)
+    #url_values = urllib.parse.urlencode(values)
+    req = urllib.request.Request(request_url, data)
+    #print(req)
+    #full_url = request_url + '?' + url_values
+    #print(full_url)
+    #response = urllib.request.urlopen(full_url)
     response = urllib.request.urlopen(req)
     results = json.loads(response.read().decode('utf-8'))
-    shorturl = results['id']
+    shorturl = results['shorturl']
     return shorturl
+  except HTTPError as e:
+    response_str = e.file.read().decode("utf-8")
+    #print(response_str)
+    #response = urllib.request.urlopen(full_url)
+    #response = urllib.request.urlopen(req)
+    results = json.loads(response_str)
+    shorturl = results['shorturl']
+    return shorturl
+  except URLError as e:
+    print('We failed to reach a server.')
+    print('Reason: ', e.reason)
   except:
     traceback.print_exc()
     return ""

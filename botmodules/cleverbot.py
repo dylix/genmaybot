@@ -151,6 +151,7 @@ class Cleverbot:
         parsed = [
             item.split('\r') for item in self.resp.split('\r\r\r\r\r\r')[:-1]
         ]
+        print(parsed)
         parsed_dict = {
             'answer': parsed[0][0],
             'conversation_id': parsed[0][1],
