@@ -38,7 +38,6 @@ def insert_newline(original_string):
     character_to_insert = '\n'
     modified_string = ''
     for i in range(0, len(original_string), interval):
-        print("i",i," orig:",len(original_string))
         modified_string += original_string[i:i+interval] + character_to_insert
     return modified_string
 

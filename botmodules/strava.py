@@ -172,6 +172,7 @@ def request_json(url):
     # print ("Strava: requesting %s Headers: %s" % (url, headers))
     req = urllib.request.Request(url, None, headers)
     response = urllib.request.urlopen(req)
+    #print(response)
     response = json.loads(response.read().decode('utf-8'))
     return response
 
@@ -600,103 +601,206 @@ def strava_ytd(self, e, return_response = False):
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
-def strava_achievements(self, e):
-    # beardedw1zard
-    if not e.input:
-        e.output += strava_achievements.helptext
-        return e
-    # end beardedw1zard
-    """ Get Achievements for a ride. """
+def strava_inside(self, e):
     strava_id = strava_get_athlete(e.nick)
     # set the token for the current user
-    token, refresh = strava_get_token(e.nick)
-
-    if check_strava_token(self, e.nick, token, refresh):
-        request_json.token = token
-        request_json.refresh = refresh
-    else:
-        request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-
+    #token, refresh = strava_get_token(e.nick)
+    if not e.input:
+        e.input = ''
+    #return e
+    #length of time to search
+    search_history_timestamp = datetime.datetime.now() - datetime.timedelta(days=21, hours=0)
+    search_history_timestamp = search_history_timestamp.timestamp()
     if e.input.isdigit():
-        ride_info = strava_get_ride_extended_info(self, e.input)
-        if ride_info:
-            achievements = strava_get_ride_achievements(e.input)
-            if achievements:
-                e.output = "Achievements for %s: %s" % (ride_info['name'], ', '.join(achievements))
+        try:
+            if strava_is_valid_user(e.input):
+                username = e.input
+                token, refresh = strava_get_token(e.nick)
+                valid_token = check_strava_token(self, e.nick, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.nick)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                # Process a last ride request for a specific strava id.
+                #print('if digit id getting users stuff')
+                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{e.input}/activities?per_page=200&after={search_history_timestamp}')
+                #stats_response = request_json("https://dylix.org/test.json")
+                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                e.output = strava_extract_inside(self, stats_response, e, e.input, username)
             else:
-                e.output = "There were no achievements on %s, time to harden the fuck up." % (ride_info['name'])
-        else:
-            e.output = "Sorry, that is an invalid Strava Ride ID."
+                e.output = "Sorry, that is not a valid Strava user."
+        except urllib.error.URLError:
+            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
     elif e.input:
         athlete_id = strava_get_athlete(e.input)
-        # set the token for the provided user, if we have it
-        token, refresh = strava_get_token(e.input)
-
-        if check_strava_token(self, e.input, token, refresh):
-            request_json.token = token
-            request_json.refresh = refresh
-        else:
-            request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-
         if athlete_id:
             try:
-                if strava_is_valid_user(athlete_id):
-                    # Process the last ride for the current strava id.
-                    response = urllib.request.urlopen('http://app.strava.com/api/v1/rides?athleteId=%s' % (athlete_id))
-                    rides_response = json.loads(response.read().decode('utf-8'))
-                    if 'rides' in rides_response:
-                        recent_ride = rides_response['rides'][0]
-                        achievements = strava_get_ride_achievements(recent_ride['id'])
-                        if achievements:
-                            e.output = "Achievements for %s: %s" % (recent_ride['name'], ', '.join(achievements))
-                        else:
-                            e.output = "There were no achievements on %s, time to harden the fuck up." % (
-                            recent_ride['name'])
-                    else:
-                        e.output = "%s does not have any recent achievements." % (e.input)
+                username = e.input
+                # set the token for the provided user, if we have it
+                token, refresh = strava_get_token(e.input)
+                valid_token = check_strava_token(self, e.input, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.input)
+                    request_json.token = token
+                    request_json.refresh = refresh
                 else:
-                    e.output = "The Strava ID setup for %s is invalid." % (e.input)
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                if strava_is_valid_user(athlete_id):
+                    # Process a last ride request for a specific strava id.
+                    stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{athlete_id}/activities?per_page=200&after={search_history_timestamp}')
+                    #stats_response = request_json("https://dylix.org/test.json")
+                    stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                    e.output = strava_extract_inside(self, stats_response, e, athlete_id, username)
+                else:
+                    e.output = "Sorry, that is not a valid Strava user."
             except urllib.error.URLError:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (
-                e.input)
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (athlete_id)
         else:
-            e.output = "%s does not have a valid Strava ID setup. Remember, if it's not on Strava, it didn't happen." % (
-            e.input)
+            # We still have some sort of string, but it isn't numberic.
+            e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
     elif strava_id:
         try:
             if strava_is_valid_user(strava_id):
                 # Process the last ride for the current strava id.
-                response = urllib.request.urlopen('http://app.strava.com/api/v1/rides?athleteId=%s' % (strava_id))
-                rides_response = json.loads(response.read().decode('utf-8'))
-                if 'rides' in rides_response:
-                    recent_ride = rides_response['rides'][0]
-                    achievements = strava_get_ride_achievements(recent_ride['id'])
-                    if achievements:
-                        e.output = "Achievements for %s: %s" % (recent_ride['name'], ', '.join(achievements))
-                    else:
-                        e.output = "There were no achievements on %s, time to harden the fuck up." % (
-                        recent_ride['name'])
+                
+                # set the token for the provided user, if we have it
+                if (e.input == ''):
+                    username = e.nick
                 else:
-                    e.output = "You do not have any recent achievements."
+                    username = e.input
+                token, refresh = strava_get_token(username)
+                valid_token = check_strava_token(self, username, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(username)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{strava_id}/activities?per_page=200&after={search_history_timestamp}')
+                #stats_response = request_json("https://dylix.org/test.json")
+                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                e.output = strava_extract_inside(self, stats_response, e, strava_id, username)
             else:
-                e.output = "You do not have a valid Strava ID setup."
+                e.output = "Sorry, that is not a valid Strava user."
         except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s The user may need to do: !strava auth" % (e.input)
+            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (
-        e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
-
-# strava_achievements.command = "!strava-achievements"
-strava_achievements.helptext = """Usage: !strava-achievements [ride id]. Gets the achievements for a Ride ID"""
-
+def strava_outside(self, e):
+    strava_id = strava_get_athlete(e.nick)
+    # set the token for the current user
+    #token, refresh = strava_get_token(e.nick)
+    if not e.input:
+        e.input = ''
+    #return e
+    #length of time to search
+    search_history_timestamp = datetime.datetime.now() - datetime.timedelta(days=21, hours=0)
+    search_history_timestamp = search_history_timestamp.timestamp()
+    if e.input.isdigit():
+        try:
+            if strava_is_valid_user(e.input):
+                username = e.input
+                token, refresh = strava_get_token(e.nick)
+                valid_token = check_strava_token(self, e.nick, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.nick)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                # Process a last ride request for a specific strava id.
+                #print('if digit id getting users stuff')
+                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{e.input}/activities?per_page=200&after={search_history_timestamp}')
+                #stats_response = request_json("https://dylix.org/test.json")
+                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                e.output = strava_extract_outside(self, stats_response, e, e.input, username)
+            else:
+                e.output = "Sorry, that is not a valid Strava user."
+        except urllib.error.URLError:
+            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+    elif e.input:
+        athlete_id = strava_get_athlete(e.input)
+        if athlete_id:
+            try:
+                username = e.input
+                # set the token for the provided user, if we have it
+                token, refresh = strava_get_token(e.input)
+                valid_token = check_strava_token(self, e.input, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.input)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                if strava_is_valid_user(athlete_id):
+                    # Process a last ride request for a specific strava id.
+                    stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{athlete_id}/activities?per_page=200&after={search_history_timestamp}')
+                    #stats_response = request_json("https://dylix.org/test.json")
+                    stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                    e.output = strava_extract_outside(self, stats_response, e, athlete_id, username)
+                else:
+                    e.output = "Sorry, that is not a valid Strava user."
+            except urllib.error.URLError:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (athlete_id)
+        else:
+            # We still have some sort of string, but it isn't numberic.
+            e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
+    elif strava_id:
+        try:
+            if strava_is_valid_user(strava_id):
+                # Process the last ride for the current strava id.
+                
+                # set the token for the provided user, if we have it
+                if (e.input == ''):
+                    username = e.nick
+                else:
+                    username = e.input
+                token, refresh = strava_get_token(username)
+                valid_token = check_strava_token(self, username, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(username)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{strava_id}/activities?per_page=200&after={search_history_timestamp}')
+                #stats_response = request_json("https://dylix.org/test.json")
+                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                e.output = strava_extract_outside(self, stats_response, e, strava_id, username)
+            else:
+                e.output = "Sorry, that is not a valid Strava user."
+        except urllib.error.URLError:
+            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+    else:
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
+    return e
 
 # ==== begin beardedwizard
 def strava_parent(self, e):
     strava_command_handler(self, e)
     return e
-
 
 strava_parent.command = "!strava"
 strava_parent.helptext = "Fetch last ride: \"!strava [optional nick]\", Set your ID: \"!strava set <athelete id>\", Reset your ID: \"!strava reset\", List achievements for a ride: \"!strava achievements <ride id>\", Allow the bot to read your private rides: \"!strava auth\""
@@ -706,14 +810,13 @@ def strava_help(self, e):
     e.output += strava_parent.helptext
     return e
 
-
 def strava_command_handler(self, e):
     arg_offset = 0
     val_offset = 1
     function = None
 
     arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'get': strava, 'set': strava_set_athlete,
-                         'reset': strava_reset_athlete, 'achievements': strava_achievements, 'ytd': strava_ytd, 'help': strava_help}
+                         'reset': strava_reset_athlete, 'inside': strava_inside, 'outside': strava_outside, 'ytd': strava_ytd, 'help': strava_help}
     arg_list = list(arg_function_dict.keys())
 
     # EX: "set 123456"
@@ -744,10 +847,8 @@ def strava_command_handler(self, e):
 
     return e
 
-
 def arg_is_present(words):
     return len(words)
-
 
 def is_known_arg(args, known_args):
     results = [arg for arg in args if arg in known_args]
@@ -755,13 +856,10 @@ def is_known_arg(args, known_args):
         return 1
     return 0
 
-
 def clean_arg_from_input(string):
     if len(string.split()) > 1:
         return ' '.join(string.split()[1:])
     return
-
-
 # ==== end beardedwizard
 
 def strava_extract_latest_ride(self, response, e, athlete_id=None):
@@ -808,6 +906,68 @@ def strava_extract_ytd_stats(self, response, e, athlete_id=None):
     else:
         return "Sorry %s, stats were available yet. You may need to run '!strava auth' Remember, if it's not on Strava, it didn't happen." % (e.nick)
 
+def strava_extract_inside(self, response, e, athlete_id=None, username=None):
+    if response:
+        for activity in response:
+            if activity['type'] == 'VirtualRide':
+                inside_ride_days = datetime.datetime.now() - datetime.datetime.strptime(activity['start_date'],'%Y-%m-%dT%H:%M:%SZ') #2024-01-18T18:28:07Z
+                days, seconds = inside_ride_days.days, inside_ride_days.seconds
+                
+                total_hours = days * 24 + seconds // 3600
+                hours = seconds // 3600
+                if days < 1:
+                    if hours == 1:
+                        inside_time = f"{hours} hour ago"
+                    else:
+                        inside_time = f"{hours} hours ago"
+                else:
+                    if days == 1:
+                        if hours == 1:
+                            inside_time = f"{days} day and {hours} hour ago"
+                        else:
+                            inside_time = f"{days} day and {hours} hours ago"
+                    else:
+                        if hours == 1:
+                            inside_time = f"{days} days and {hours} hour ago"
+                        else:
+                            inside_time = f"{days} days and {hours} hours ago"
+
+                return f"{username} last rode inside {inside_time}\n{strava_ride_to_string(activity, athlete_id)}"
+        return f"{username} hasnt ridden inside in the last 21 days. Time to harden the fuck up"
+    else:
+        return "Sorry %s, no stats were available yet. You may need to run '!strava auth' Remember, if it's not on Strava, it didn't happen." % (e.nick)
+
+def strava_extract_outside(self, response, e, athlete_id=None, username=None):
+    if response:
+        for activity in response:
+            if activity['type'] == 'Ride' or activity['type'] == 'EBikeRide':
+                outside_ride_days = datetime.datetime.now() - datetime.datetime.strptime(activity['start_date'],'%Y-%m-%dT%H:%M:%SZ') #2024-01-18T18:28:07Z
+                days, seconds = outside_ride_days.days, outside_ride_days.seconds
+                
+                total_hours = days * 24 + seconds // 3600
+                hours = seconds // 3600
+                if days < 1:
+                    if hours == 1:
+                        outside_time = f"{hours} hour ago"
+                    else:
+                        outside_time = f"{hours} hours ago"
+                else:
+                    if days == 1:
+                        if hours == 1:
+                            outside_time = f"{days} day and {hours} hour ago"
+                        else:
+                            outside_time = f"{days} day and {hours} hours ago"
+                    else:
+                        if hours == 1:
+                            outside_time = f"{days} days and {hours} hour ago"
+                        else:
+                            outside_time = f"{days} days and {hours} hours ago"
+
+                return f"{username} last rode outside {outside_time}\n{strava_ride_to_string(activity, athlete_id)}"
+        return f"{username} hasnt ridden outside in the last 21 days. Time to harden the fuck up"
+    else:
+        return "Sorry %s, no stats were available yet. You may need to run '!strava auth' Remember, if it's not on Strava, it didn't happen." % (e.nick)
+
 def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is missing we can default to mph
     # Convert a lot of stuff we need to display the message
     moving_time = str(datetime.timedelta(seconds=recent_ride['moving_time']))
@@ -835,6 +995,11 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
         # Output string
         return_string = "%s on %s (http://www.strava.com/activities/%s)\n" % (recent_ride['name'], time_start, recent_ride['id'])
         return_string += "Ride Stats: %s mi in %s | %s mph average / %s mph max | %s feet climbed" % (miles, moving_time, mph, max_mph, int(feet_climbed))
+        #× 9/5) + 32
+        # ADD Temp
+        if 'average_temp' in recent_ride:
+            return_string += " | Avg. Temp: %s°F" % (round((recent_ride['average_temp'] * 9/5) + 32))
+        
     elif measurement_pref == "meters":
         kmh = round(float(recent_ride['average_speed']) * 3.6, 1)  # meters per second to km/h
         km = round(float(recent_ride['distance'] / 1000), 1)  # meters to km
@@ -842,14 +1007,9 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
         m_climbed = recent_ride['total_elevation_gain']
         return_string = "%s on %s (http://www.strava.com/activities/%s)\n" % (recent_ride['name'], time_start, recent_ride['id'])
         return_string += "Ride Stats: %s km in %s | %s km/h average / %s km/h max | %s meters climbed" % (km, moving_time, kmh, max_kmh, int(m_climbed))
-
-    # ADD Temp
-    if 'average_temp' in recent_ride:
-        return_string += " | Avg. Temp: %s" % recent_ride['average_temp']
-
-    # ADD HR
-    if avg_hr > 0:
-        return_string += " | Avg. HR: %s" % (int(avg_hr))
+        # ADD HR
+        if avg_hr > 0:
+            return_string += " | Avg. HR: %s°C" % (int(avg_hr))
 
 
     # Figure out if we need to add average watts to the string.
@@ -871,15 +1031,6 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
 
     return return_string
 
-
-def strava_get_measurement_pref(athlete_id):
-    try:
-        athlete_info = request_json("https://www.strava.com/api/v3/athletes/%s" % athlete_id)
-        if athlete_info:
-            return athlete_info['measurement_preference']
-    except:
-        return None
-
 def strava_get_athlete_info(athlete_id):
     #print('getting athlete info')
     try:
@@ -888,7 +1039,6 @@ def strava_get_athlete_info(athlete_id):
             return athlete_info
     except:
         return None
-
 
 def strava_get_ride_extended_info(self, ride_id):
     #print('getting extended info')
@@ -903,7 +1053,6 @@ def strava_get_ride_extended_info(self, ride_id):
     except urllib.error.URLError:
         return False
 
-
 def strava_get_ride_efforts(ride_id):
     """ Get all the efforts (segments and their respective performance) from a ride. """
     try:
@@ -915,7 +1064,6 @@ def strava_get_ride_efforts(ride_id):
             return False
     except urllib.error.URLError:
         return False
-
 
 def strava_get_ride_achievements(ride_id):
     try:
@@ -936,7 +1084,6 @@ def strava_get_ride_achievements(ride_id):
     except urllib.error.URLError:
         return False
 
-
 def strava_get_ride_distance_since_date(self, athlete_id, begin_date, offset_count=0):
     """ Recursively aggregate all of the ride mileage since the begin_date by using strava's pagination """
     try:
@@ -956,7 +1103,6 @@ def strava_get_ride_distance_since_date(self, athlete_id, begin_date, offset_cou
     except urllib.error.URLError:
         return 0
 
-
 def strava_is_valid_user(strava_id, new=False):
     
     """ Checks to see if a strava id is a valid strava user """
@@ -972,24 +1118,20 @@ def strava_is_valid_user(strava_id, new=False):
     except urllib.error.URLError:
         return False
 
-
 def strava_convert_meters_per_second_to_miles_per_hour(mps):
     """ Converts meters per second to miles per hour, who the fuck uses this to measure bike speed? Idiots. """
     mph = 2.23694 * float(mps)
     return round(mph, 1)
-
 
 def strava_convert_meters_per_hour_to_miles_per_hour(meph):
     """ Convert meters per hour to miles per hour. """
     mph = 0.000621371192 * float(meph)
     return round(mph, 1)
 
-
 def strava_convert_meters_to_miles(meters):
     """ Convert meters to miles. """
     miles = 0.000621371 * float(meters)
     return round(miles, 1)
-
 
 def strava_convert_meters_to_feet(meters):
     """ Convert meters to feet. """
