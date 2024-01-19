@@ -3,6 +3,7 @@ import json
 import urllib, urllib.request, urllib.parse
 import datetime
 import base64
+import re
 
 
 def __init__(self):
@@ -18,10 +19,9 @@ def __init__(self):
     response = urllib.request.urlopen(req)
     response = json.loads(response.read().decode('utf-8'))
     read_timeline.holyshitbearstoken = response['access_token']
-    print(read_timeline.holyshitbearstoken)
-    read_timeline.self = self
+    self.logger.debug(read_timeline.holyshitbearstoken)
   except Exception as inst:
-      print(inst)
+      self.logger.debug(inst)
 
 def read_timeline (user):
     url = "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=%s&count=1" % user
@@ -32,10 +32,7 @@ def read_timeline (user):
     updated = datetime.datetime.strptime(tweet[0]['created_at'], "%a %b %d %H:%M:%S +0000 %Y")
     ago = round((datetime.datetime.utcnow() - updated).seconds/60)
     text = tweet[0]['user']['screen_name'] + ": " + tweet[0]['text']
-    try:
-      text = read_timeline.self.tools['decode_htmlentities'](text)
-    except:
-      pass
+    text = re.sub(r"\r\n|\n|\r", " ", text)
     return text, updated, ago
 
 def latest_breaking(self, e):
@@ -51,7 +48,12 @@ def latest_tweet(self, e):
     return e
 latest_tweet.command = "!lasttweet"
 
-def breaking_alert():
+def trump_tweet(self, e):
+  e.input = "realDonaldTrump"
+  return latest_tweet(self, e)
+trump_tweet.command = "!trump"
+
+def breaking_alert(self):
     #returns a new breaking news only if it hasn't returned it before
       try:
         description, updated, ago = read_timeline('breakingnews')
@@ -62,7 +64,7 @@ def breaking_alert():
             breaking_alert.lastcheck = updated
             return description
       except Exception as inst:
-          print("breakinglert: " + str(inst))
-          pass
+          self.logger.debug("breakinglert: " + str(inst))
+
 breaking_alert.lastcheck = ""
-breaking_alert.alert = True
+breaking_alert.alert = False
