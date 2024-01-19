@@ -933,7 +933,7 @@ def strava_extract_inside(self, response, e, athlete_id=None, username=None):
                             inside_time = f"{days} days and {hours} hours ago"
 
                 return f"{username} last rode inside {inside_time}\n{strava_ride_to_string(activity, athlete_id)}"
-        return f"{username} hasnt ridden inside in the last 21 days. Time to harden the fuck up"
+        return f"{username} hasn't ridden inside in the last 21 days. Time to harden the fuck up."
     else:
         return "Sorry %s, no stats were available yet. You may need to run '!strava auth' Remember, if it's not on Strava, it didn't happen." % (e.nick)
 
@@ -964,7 +964,7 @@ def strava_extract_outside(self, response, e, athlete_id=None, username=None):
                             outside_time = f"{days} days and {hours} hours ago"
 
                 return f"{username} last rode outside {outside_time}\n{strava_ride_to_string(activity, athlete_id)}"
-        return f"{username} hasnt ridden outside in the last 21 days. Time to harden the fuck up"
+        return f"{username} hasn't ridden outside in the last 21 days. Time to harden the fuck up."
     else:
         return "Sorry %s, no stats were available yet. You may need to run '!strava auth' Remember, if it's not on Strava, it didn't happen." % (e.nick)
 
