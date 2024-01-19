@@ -165,7 +165,7 @@ def get_title(self, e, url):
         except:
             pass
         
-        
+        print('looking for title')
         return title
 
 
@@ -181,12 +181,25 @@ def last_title(self, e):
     conn.close()
     
     return url_posted(self, e, True)
-
 last_title.command = "!title"
 last_title.helptext = "Usage: !title\nShows the title of the last URL that was posted in the channel"
 
+#cus huyens is a needy fucker
+def invidious_link(self, e):
+    conn = sqlite3.connect("links.sqlite")
+    cursor = conn.cursor()
+    if cursor.execute("SELECT * FROM links WHERE url like '%youtube%' ORDER BY rowid DESC LIMIT 1"):
+        result = cursor.fetchone()
+        url = result[0]
+        
+        e.input = url
+    conn.close()
+    regex = r"(?:https:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)"
+    e.input = re.sub(regex, r"https://vid.puffyan.us/watch?v=\1",url)
+    return url_posted(self, e, True)
+invidious_link.command = "!invidious"
+invidious_link.helptext = "Usage: !invidious\nLinks to invidious using last youtube url"
 
-    
 def last_link(self, e):
     #displays the title of the last link posted (requires sql)
     conn = sqlite3.connect("links.sqlite")
