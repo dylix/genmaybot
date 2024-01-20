@@ -740,7 +740,6 @@ def strava_outside(self, e):
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
-
 # ==== begin beardedwizard
 def strava_parent(self, e):
     strava_command_handler(self, e)

@@ -382,7 +382,7 @@ def onecall(self, e, location="", hourly=False, daily=False):
                 pass
 
             if country != "US":
-                world_weather += f" {forecast_day} L:{fahrenheit_to_celsius(day['temp'])}°C/h:{fahrenheit_to_celsius(day['temp']['max'])}°C {precip_chance}{day_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh {summary_icon}{day['weather'][0]['description']} /"
+                world_weather += f" {forecast_day} L:{fahrenheit_to_celsius(day['temp']['min'])}°C/h:{fahrenheit_to_celsius(day['temp']['max'])}°C {precip_chance}{day_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh {summary_icon}{day['weather'][0]['description']} /"
             else:
                 us_weather += f" {forecast_day} L:{int(day['temp']['min'])}°F/H:{int(day['temp']['max'])}°F {precip_chance}{day_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph {summary_icon}{day['weather'][0]['description']} /"
         if country != "US":
