@@ -98,11 +98,9 @@ def strava_insert_token(user, token, refresh):
     conn.commit()
     c.close()
 
-
 def strava_oauth_exchange(self, e):
     strava_client_secret = self.botconfig["APIkeys"]["stravaClientSecret"]
     strava_client_id = self.botconfig["APIkeys"]["stravaClientId"]
-
     nick = e.nick
     # Send the user off to Strava to authorize us
     strava_redirect_url = "https://dylix.org/strava/callback?stravaId=%s" % (nick)
@@ -118,17 +116,12 @@ def set_stravatoken(line, nick, self, c):
     self.botconfig["APIkeys"]["stravaToken"] = line[12:]
     with open('genmaybot.cfg', 'w') as configfile:
         self.botconfig.write(configfile)
-
-
 set_stravatoken.admincommand = "stravatoken"
-
 
 def set_stravaclientid(line, nick, self, c):
     self.botconfig["APIkeys"]["stravaClientId"] = line[15:]
     with open('genmaybot.cfg', 'w') as configfile:
         self.botconfig.write(configfile)
-
-
 set_stravaclientid.admincommand = "stravaclientid"
 
 
@@ -136,10 +129,7 @@ def set_stravaclientsecret(line, nick, self, c):
     self.botconfig["APIkeys"]["stravaClientSecret"] = line[19:]
     with open('genmaybot.cfg', 'w') as configfile:
         self.botconfig.write(configfile)
-
-
 set_stravaclientsecret.admincommand = "stravaclientsecret"
-
 
 def __init__(self):
     """ On init, read the token to a variable, then do a system check which runs upgrades and creates tables. """
@@ -163,7 +153,6 @@ def __init__(self):
     #    thread = threading.Thread(target=cherrypy.server.start, )
     #    thread.start()
 
-
 def request_json(url):
     #print('requesting json: ', url)
     if not request_json.token:  # if we haven't found a valid client token, fall back to the public one
@@ -176,17 +165,14 @@ def request_json(url):
     response = json.loads(response.read().decode('utf-8'))
     return response
 
-
 def strava_software_version():
     """ Returns the current version of the strava module, used upgrade """
     return 1
-
 
 def strava_check_system():
     """ Run upgrades and check on initial table creation/installation """
     strava_check_upgrades()
     strava_check_create_tables()
-
 
 def strava_check_upgrades():
     """ Check the version in the database and upgrade the system recursively until we're at the current version """
@@ -203,7 +189,6 @@ def strava_check_upgrades():
         globals()[func]()
         strava_check_upgrades()
 
-
 def strava_set_version(version_field, version_number):
     """ Sets a version number for any component """
     conn = sqlite3.connect('strava.sqlite')
@@ -214,7 +199,6 @@ def strava_set_version(version_field, version_number):
                'version_number': version_number})
     conn.commit()
     c.close()
-
 
 def strava_get_version(version_field):
     """ Get the version for a component of code """
@@ -229,7 +213,6 @@ def strava_get_version(version_field):
     else:
         c.close()
         return False
-
 
 def strava_check_create_tables():
     """ Create tables for the database, these should always be up to date """
@@ -249,7 +232,6 @@ def strava_check_create_tables():
             conn.commit()
     c.close()
 
-
 def strava_insert_athlete(nick, athlete_id):
     """ Insert a user's strava id into the athletes table """
     conn = sqlite3.connect('strava.sqlite')
@@ -259,7 +241,6 @@ def strava_insert_athlete(nick, athlete_id):
     conn.commit()
     c.close()
 
-
 def strava_delete_athlete(nick, athlete_id):
     """ Delete a user's strava id from the athletestable """
     conn = sqlite3.connect('strava.sqlite')
@@ -268,7 +249,6 @@ def strava_delete_athlete(nick, athlete_id):
     c.execute(query, {'user': nick, 'strava_id': athlete_id})
     conn.commit()
     c.close()
-
 
 def strava_get_athlete(nick):
     """ Get an athlete ID by user """
@@ -283,7 +263,6 @@ def strava_get_athlete(nick):
     else:
         c.close()
         return False
-
 
 def strava_line_parser(self, e):
     """ Watch every line for a valid strava line """
@@ -305,9 +284,7 @@ def strava_line_parser(self, e):
                 return e
     else:
         return
-
 strava_line_parser.lineparser = False
-
 
 def strava_set_athlete(self, e):
     """ Set an athlete's Strava ID. """
@@ -323,15 +300,6 @@ def strava_set_athlete(self, e):
         # Bark at stupid users.
         self.irccontext.privmsg(e.nick, "Usage: !strava set <strava id>")
 
-
-# strava_set_athlete.command = "!strava-set"
-# strava_set_athlete.helptext = """
-#                        Usage: !strava-set <strava id>
-#                        Example: !strava-set 12345
-#                        Saves your Strava ID to the bot.
-#                        Once your Strava ID is saved you can use those commands without an argument."""
-
-
 def strava_reset_athlete(self, e):
     """ Resets an athlete's Strava ID. """
     athlete_id = strava_get_athlete(e.nick)
@@ -341,13 +309,6 @@ def strava_reset_athlete(self, e):
                                 "Your Strava ID has been reset, but remember, if it's not on Strava, it didn't happen.")
     else:
         self.irccontext.privmsg(e.nick, "You don't even have a Strava ID set, why would you want to reset it?")
-
-
-# strava_reset_athlete.command = "!strava-reset"
-# strava_reset_athlete.helptext = """
-#                        Usage: !strava-reset
-#                        Removes your Strava ID from the bot."""
-
 
 def strava(self, e):
     strava_id = strava_get_athlete(e.nick)
@@ -423,7 +384,6 @@ def strava(self, e):
                     request_json.refresh = refresh
                 else:
                     request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-                
                 rides_response = request_json("https://www.strava.com/api/v3/athletes/%s/activities?per_page=1" % strava_id)
                 e.output = strava_extract_latest_ride(self, rides_response, e, strava_id)
             else:
@@ -433,22 +393,6 @@ def strava(self, e):
     else:
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
-# strava.command = "!strava"
-# strava.helptext = """
-#                        Usage: !strava [strava id]"
-#                        Example: !strava-last, !strava-last 12345
-#                        Gets the information about the last ride for the Strava user.
-#                        If you have a Strava ID set with !strava-set you can use this command without an arguement.
-#                        """
-
-class UserStats:
-  def __init__(self, name, count, distance, elevation_gain, moving_time, elapsed_time):
-    self.name = name
-    self.count = count
-    self.distance = distance
-    self.elevation_gain = elevation_gain
-    self.moving_time = moving_time
-    self.elapsed_time = elapsed_time
 
 def compare_strava(self, e):
     participants = e.input.split(' ')
@@ -501,7 +445,6 @@ def compare_strava(self, e):
     elif participants[0] == '' or participants[0] == e.nick:
         e.output = "Sorry %s, You need something to compare it to. At the very least !compare someothernick" % (e.nick)
         return e
-
 compare_strava.command = "!compare"
 compare_strava.helptext = "Usage: !compare nick1 nick2. Compares users year to date stats."
 
@@ -797,14 +740,13 @@ def strava_outside(self, e):
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
+
 # ==== begin beardedwizard
 def strava_parent(self, e):
     strava_command_handler(self, e)
     return e
-
 strava_parent.command = "!strava"
 strava_parent.helptext = "Fetch last ride: \"!strava [optional nick]\", Set your ID: \"!strava set <athelete id>\", Reset your ID: \"!strava reset\", List achievements for a ride: \"!strava achievements <ride id>\", Allow the bot to read your private rides: \"!strava auth\""
-
 
 def strava_help(self, e):
     e.output += strava_parent.helptext
@@ -973,7 +915,6 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
     moving_time = str(datetime.timedelta(seconds=recent_ride['moving_time']))
     ride_datetime = time.strptime(recent_ride['start_date_local'], "%Y-%m-%dT%H:%M:%SZ")
     time_start = time.strftime("%B %d, %Y at %I:%M %p", ride_datetime)
-
     # Try to get the average heart rate
     if 'average_heartrate' in recent_ride:
         avg_hr = recent_ride['average_heartrate']
@@ -994,35 +935,44 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
         feet_climbed = strava_convert_meters_to_feet(recent_ride['total_elevation_gain'])
         # Output string
         return_string = "%s on %s (http://www.strava.com/activities/%s)\n" % (recent_ride['name'], time_start, recent_ride['id'])
-        return_string += "Ride Stats: %s mi in %s | %s mph average / %s mph max | %s feet climbed" % (miles, moving_time, mph, max_mph, int(feet_climbed))
+        return_string += "%s Stats: %s mi in %s | %s mph average / %s mph max | %s feet climbed" % (recent_ride['sport_type'], miles, moving_time, mph, max_mph, int(feet_climbed))
         #× 9/5) + 32
         # ADD Temp
         if 'average_temp' in recent_ride:
             return_string += " | Avg. Temp: %s°F" % (round((recent_ride['average_temp'] * 9/5) + 32))
-        
+        # ADD HR
+        if avg_hr > 0:
+            return_string += " | Avg. HR: %s" % (int(avg_hr))
     elif measurement_pref == "meters":
         kmh = round(float(recent_ride['average_speed']) * 3.6, 1)  # meters per second to km/h
         km = round(float(recent_ride['distance'] / 1000), 1)  # meters to km
         max_kmh = round(float(recent_ride['max_speed']) * 3.6, 1)  # m/s to km/h
         m_climbed = recent_ride['total_elevation_gain']
         return_string = "%s on %s (http://www.strava.com/activities/%s)\n" % (recent_ride['name'], time_start, recent_ride['id'])
-        return_string += "Ride Stats: %s km in %s | %s km/h average / %s km/h max | %s meters climbed" % (km, moving_time, kmh, max_kmh, int(m_climbed))
+        return_string += "%s Stats: %s km in %s | %s km/h average / %s km/h max | %s meters climbed" % (recent_ride['sport_type'], km, moving_time, kmh, max_kmh, int(m_climbed))
+        # ADD TEMP
+        if 'average_temp' in recent_ride:
+            return_string += " | Avg. Temp: %s°C" % (int(recent_ride['average_temp']))
         # ADD HR
         if avg_hr > 0:
-            return_string += " | Avg. HR: %s°C" % (int(avg_hr))
-
+            return_string += " | Avg. HR: %s" % (int(avg_hr))
 
     # Figure out if we need to add average watts to the string.
-    # Users who don't have a weight won't have average watts.
     if 'weighted_average_watts' in recent_ride:
-        return_string += " | %s watts avg power (weighted)" % (int(recent_ride['weighted_average_watts']))
+        if recent_ride['device_watts']:
+            return_string += " | %s watts avg power (weighted)" % (int(recent_ride['weighted_average_watts']))
+        else:
+            return_string += " | %s fake watts avg power (weighted)" % (int(recent_ride['weighted_average_watts']))
         if 'weight' in athlete_info:
             if athlete_info['weight'] > 0:
                 return_string += " | Watts/KG: %s" % (round(int(recent_ride['weighted_average_watts']) / int(athlete_info['weight']), 2))
         if avg_hr > 0:
             return_string += " | %s watts/bpm" % (round(recent_ride['weighted_average_watts']/avg_hr, 2))
     elif 'average_watts' in recent_ride:
-        return_string += " | %s watts average power" % (int(recent_ride['average_watts']))
+        if recent_ride['device_watts']:
+            return_string += " | %s watts average power" % (int(recent_ride['average_watts']))
+        else:
+            return_string += " | %s fake watts average power" % (int(recent_ride['average_watts']))
         if 'weight' in athlete_info:
             if athlete_info['weight'] > 0:
                 return_string += " | Watts/KG: %s" % (round(int(recent_ride['average_watts']) / int(athlete_info['weight']), 2))
@@ -1138,6 +1088,15 @@ def strava_convert_meters_to_feet(meters):
     feet = 3.28084 * float(meters)
     return round(feet, 1)
 
+class UserStats:
+  def __init__(self, name, count, distance, elevation_gain, moving_time, elapsed_time):
+    self.name = name
+    self.count = count
+    self.distance = distance
+    self.elevation_gain = elevation_gain
+    self.moving_time = moving_time
+    self.elapsed_time = elapsed_time
+
 def sentencify(text):
     adjectives = "befitting, correct, decent, decorous, genteel, proper, polite, respectable, seemly, acceptable, " \
                  "adequate, satisfactory, tolerable, dignified, elegant, gracious, stiff, stuffy, apt, congenial, " \
@@ -1165,15 +1124,20 @@ def sentencify(text):
 
     ride_synonyms = "drive, spin, turn, joyride, conveyance, passage, transit, transport, twirl, whirl, round, jaunt, " \
                     "orbit, excursion, ramble, expedition, odyssey, trek, journey, voyage,  roll, cruise, meander, stroll".split(", ")
+    synonyms_for_ride = ["drive", "journey", "trip", "excursion", "tour", "trek", "cruise", "spin", "expedition", "jaunt", "joyride", "ramble", "outing", "voyage", "travel", "commute", "safari", "pilgrimage", "circuit", "explore", "adventure", "quest", "sally", "traverse", "ramble", "stroll", "wander", "roam", "amble", "saunter", "mosey", "cakewalk", "promenade", "turn", "jaunt", "sail", "proceed", "progress", "march", "move", "gallop", "canter", "trot", "stride", "hike", "march", "waltz", "climb", "ascend", "descend", "glide", "slide", "slip", "coast", "skate", "ski", "cruise", "hover", "swoop", "soar", "plunge", "plod", "shuffle", "saunter", "amble", "trudge", "tread", "stomp", "stroll", "mosey", "meander", "wander", "gallivant", "peregrinate", "wanderlust", "explore", "rove", "hike", "trek", "ramble", "tour", "excursion", "jaunt", "journey", "trip", "voyage", "pilgrimage", "jaunt", "spin", "turn", "whirl", "cycle", "drive", "ride out", "spin", "jaunt", "whiz", "zoom", "blitz", "blast", "dart", "dash", "bolt", "sprint", "gallop", "race", "speed", "hurry", "scamper", "scramble", "scuttle", "hasten", "hurtle", "rush", "tear", "charge", "plunge", "plummet", "dive", "drop", "fall", "descend", "sink", "plod", "march", "trudge", "stomp", "slog", "stumble", "limp", "shuffle", "wade", "amble", "saunter", "stroll", "roam", "ramble", "meander", "wander", "mosey", "cruise", "sail", "glide", "soar", "fly", "drift", "coast", "hover", "slip", "slide", "skate", "ski", "slalom", "plow", "ride on", "motor", "travel", "commute", "trek", "hike", "journey", "venture", "explore", "quest", "search", "hunt", "prowl", "patrol", "scout", "foray", "sally", "stint", "outgoing", "course", "circumnavigate", "globe-trot"]
 
-    picked_ride = ride_synonyms[random.randint(0, len(ride_synonyms)-1)]
+    #picked_ride = ride_synonyms[random.randint(0, len(ride_synonyms)-1)]
+    picked_ride = synonyms_for_ride[random.randint(0, len(synonyms_for_ride)-1)]
 
 
     touch_synonyms = "bit, crumb, dab, dram, driblet, glimmer, hint, lick, little, tad, nip, ounce, " \
                      "ray, shade, shadow, shred, smell, smidgen, speck, splash, spot, sprinkling, trace, " \
                      "iota, semblance, grain, dash, drop, sliver, part, pinch, morsel, chunk, pile, wad, load, bunch".split(", ")
 
-    picked_touch = touch_synonyms[random.randint(0, len(touch_synonyms)-1)]
+    synonyms_for_touch = ["feel", "contact", "handle", "grasp", "tap", "stroke", "caress", "pat", "press", "palm", "hold", "manipulate", "fondle", "brush", "nudge", "tickle", "thumb", "tactile", "sense", "reach", "meet", "greet", "connect", "join", "link", "reach out", "make contact", "graze", "glide", "slip", "slide", "come into contact", "run into", "impact", "strike", "smack", "hit", "collide", "clash", "bump", "knock", "nuzzle", "probe", "poke", "prod", "investigate", "explore", "examine", "test", "try", "handle", "grope", "palpate", "thumb", "brush", "pat", "caress", "fondle", "pet", "stroke", "press", "graze", "contact", "tap", "trace", "kiss", "hold", "grip", "clasp", "embrace", "nudge", "tickling", "tickle", "itch", "tingle", "prickle", "pierce", "penetrate", "invade", "tangency", "touchdown", "landing", "adjoin", "border", "abut", "neighboring", "adjacent", "proximate", "close", "near", "approximate", "next to", "beside", "alongside", "by", "with", "within", "outside", "encounter", "experience", "come across", "meet with", "confront", "face", "deal with", "handle", "undergo", "impact", "effect", "influence", "affect", "strike", "hit", "reach", "attain", "arrive", "achieve", "gain", "accomplish", "fulfill", "realize", "sense", "perceive", "discern", "detect", "notice", "recognize", "be in contact", "make contact", "come into contact", "be in touch", "make a connection", "establish a connection", "interact", "interface", "commune", "communicate", "associate", "relate", "link", "unite", "blend", "merge", "fuse", "meld", "intermingle", "intermix", "mix", "interact", "influence", "affect", "impact", "touch upon", "concern", "involve", "cover", "encompass"]
+
+    #picked_touch = touch_synonyms[random.randint(0, len(touch_synonyms)-1)]
+    picked_touch = synonyms_for_touch[random.randint(0, len(synonyms_for_touch)-1)]
 
     if picked_touch[0] in ["a", "e", "i", "o", "u"]:
         touch_article = "an"
@@ -1182,10 +1146,11 @@ def sentencify(text):
 
     last_nouns = "descent, dip, dive, drop, fall, nosedive, plunge, boost, hike, elevation, ascent, rise, climb, " \
                  "effort, pain, labor, grind, sweat, toil, slog, struggle". split(", ")
+    synonyms_for_hard_effort = ["struggle", "endeavor", "exertion", "vigorous attempt", "determined work", "strenuous effort", "arduous task", "laborious endeavor", "tough undertaking", "herculean effort", "resolute work", "intense exertion", "concentrated labor", "tenacious effort", "gritty attempt", "sustained labor", "exhaustive work", "rigorous striving", "conscientious endeavor", "forceful labor"]
+    #picked_noun = last_nouns[random.randint(0, len(last_nouns)-1)]
+    picked_noun = synonyms_for_hard_effort[random.randint(0, len(synonyms_for_hard_effort)-1)]
 
-    picked_noun = last_nouns[random.randint(0, len(last_nouns)-1)]
-
-
-
-    return "{} {} {} {} with {} {} of {}".format(adjective_article, picked_adjective, text,
-                                                    picked_ride, touch_article, picked_touch, picked_noun)
+    generated_sentence = "{} {} {} {} with {} {} of {}".format(adjective_article, picked_adjective, text, picked_ride, touch_article, picked_touch, picked_noun)
+    return generated_sentence.title()
+    #return "{} {} {} {} with {} {} of {}".format(adjective_article, picked_adjective, text,
+    #                                                picked_ride, touch_article, picked_touch, picked_noun)

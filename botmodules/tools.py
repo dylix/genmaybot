@@ -95,12 +95,10 @@ def google_url(searchterm, regexstring):
 
 
 def load_html_from_url(url, readlength="", returnurl=False):
-    #print("url:",url)
     url = fixurl(url)
-    #print("fixurl:",url)
     opener = urllib.request.build_opener()
 
-    opener.addheaders = [('User-Agent', "Opera/9.10 (YourMom 8.0)")]
+    opener.addheaders = [('User-Agent', "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")]
 
     page = None
     pagetmp = opener.open(url)

@@ -2,7 +2,7 @@ import re
 import hashlib
 import datetime
 import sqlite3
-
+from bs4 import BeautifulSoup
 
 def url_parser(self, e):
 
@@ -146,8 +146,8 @@ def get_title(self, e, url):
     page = self.tools["load_html_from_url"](url, length)
     title = ""
     meta_title = ""
-
     
+
     if page and page.find('meta', attrs={'name': "generator", 'content': re.compile("MediaWiki", re.I)}):
         try:
             wiki = self.bangcommands["!wiki"](self, e, True, True)
@@ -157,15 +157,22 @@ def get_title(self, e, url):
     elif page:
         try:
             title = "Title: " + page.find('title').string
+            if title != '':
+                return title
         except:
             pass
-
         try:
             title = "Title: " + page.find('meta', attrs={'property': "og:title"}).get("content")
+            if title != '':
+                return title
         except:
             pass
-        
-        print('looking for title')
+        try:
+            title = "Title: " + page.find('meta', attrs={'name': "title"}).get("content")
+            if title != '':
+                return title
+        except:
+            pass
         return title
 
 
@@ -188,7 +195,7 @@ last_title.helptext = "Usage: !title\nShows the title of the last URL that was
 def invidious_link(self, e):
     conn = sqlite3.connect("links.sqlite")
     cursor = conn.cursor()
-    if cursor.execute("SELECT * FROM links WHERE url like '%youtube%' ORDER BY rowid DESC LIMIT 1"):
+    if cursor.execute("SELECT * FROM links WHERE url like '%youtu%' ORDER BY rowid DESC LIMIT 1"):
         result = cursor.fetchone()
         url = result[0]
         
