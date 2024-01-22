@@ -25,8 +25,11 @@ def get_urbandictionary(self, e):
     if searchterm == "":
         url = "http://www.urbandictionary.com/random.php"
 
-    page, url = self.tools["load_html_from_url"](url, returnurl=True)
-
+    try:
+        page, url = self.tools["load_html_from_url"](url, returnurl=True)
+    except:
+        e.output = f"No Definition was found for {e.input}"
+        return e
     first_definition = ""
 
     if page.find(id='not_defined_yet') is not None:

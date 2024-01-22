@@ -16,7 +16,7 @@ def twitch_live(self, e):
     else:
         username = e.input
     if checkIfUserIsStreaming(username):
-        e.output = f"Yay {username} is streaming. https://twitch.tv/{username}"
+        e.output = f"Yay, {username} is streaming. https://twitch.tv/{username}"
     else:
         e.output = f"Aww, {username} isn't streaming. https://twitch.tv/{username}"
     return e

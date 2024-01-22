@@ -468,7 +468,8 @@ def onecall(self, e, location="", hourly=False, daily=False):
                 alert_tags = alert['tags']
                 title = f"{alert_event} for {alert_sender_name}"
                 content = f"{alert_event}\n\nStart time: {alert_start}\nEnd time: {alert_end}\n\n{alert_sender_name}\n{alert_description}\n\n{alert_tags}"
-                alert_urls.append(hastebin(self, title, content))
+                alert_urls.append(dylixpaste(self, title, content))
+                #alert_urls.append(hastebin(self, title, content))
 
         if country == "US": #If we're in the US, use Fahrenheit, otherwise Celsius    
             if (len(alert_urls) > 0):
@@ -556,7 +557,17 @@ def pastebin(self, title, content):
     password = 'b'
     return paste(username, password, api_key, privacy, title, content)
     #print(pastebinapi.url(setting="1")) # get pastebin url
-    
+
+def dylixpaste(self, title, content):
+    #api_key = self.botconfig["APIkeys"]["hastebinAPIkey"]
+    #headers = {"Authorization": "Bearer " + api_key, "content-type": "text/plain" }
+    headers = {"content-type": "application/json" }
+    data = { "title": title, "text": content }
+    data = json.dumps(data)
+    response = requests.post("https://plutonicx.org/paste2db", data=data, headers=headers)
+    paste = response.json()
+    return paste['url']
+
 def get_sun(self, e):
     try:
         location = e.location

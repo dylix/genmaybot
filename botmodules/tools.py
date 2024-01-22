@@ -96,12 +96,10 @@ def google_url(searchterm, regexstring):
 
 def load_html_from_url(url, readlength="", returnurl=False):
     url = fixurl(url)
-    opener = urllib.request.build_opener()
-
-    opener.addheaders = [('User-Agent', "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")]
-
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    req = urllib.request.Request(url, None, headers=headers)
+    pagetmp = urllib.request.urlopen(req)
     page = None
-    pagetmp = opener.open(url)
     if pagetmp.headers['content-type'].find("text") != -1:
         url = pagetmp.geturl()
         if readlength:
@@ -109,7 +107,6 @@ def load_html_from_url(url, readlength="", returnurl=False):
         else:
             page = pagetmp.read()
         page = BeautifulSoup(page, features='html.parser')
-    opener.close()
     if returnurl:
         return page, url
     return page
@@ -198,7 +195,7 @@ def shorten_url(url):
     data = urllib.parse.urlencode(values)
     data = data.encode('ascii') # data should be bytes
     #headers = {'Content-Type': 'application/json'}
-    request_url = "https://dylix.org/yourls/yourls-api.php"
+    request_url = "https://plutonicx.org/yourls/yourls-api.php"
     #req = urllib.request.Request(request_url, values.encode(), headers)
     #url_values = urllib.parse.urlencode(values)
     req = urllib.request.Request(request_url, data)
