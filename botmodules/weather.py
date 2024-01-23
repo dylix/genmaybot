@@ -469,7 +469,6 @@ def onecall(self, e, location="", hourly=False, daily=False):
                 title = f"{alert_event} for {alert_sender_name}"
                 content = f"{alert_event}\n\nStart time: {alert_start}\nEnd time: {alert_end}\n\n{alert_sender_name}\n{alert_description}\n\n{alert_tags}"
                 alert_urls.append(dylixpaste(self, title, content))
-                #alert_urls.append(hastebin(self, title, content))
 
         if country == "US": #If we're in the US, use Fahrenheit, otherwise Celsius    
             if (len(alert_urls) > 0):

@@ -317,7 +317,10 @@ class TestBot(SingleServerIRCBot):
             try:
                 e = self.bangcommands["!error"](self, e)
             except:
-                e.output = "Command failed: {}".format(sys.exc_info())
+                try:
+                    e.output = "Command failed: {}".format(sys.exc_info())
+                except:
+                    e.output = "Command failed: {}".format(command)
 
             self.bot_say(e)
 
@@ -505,10 +508,10 @@ class TestBot(SingleServerIRCBot):
 
     class Botevent:
 
-        def __init__(self, source, nick, hostmask, inpt, output="", notice=False):
+        def __init__(self, source, nick, hostmask, input, output="", notice=False):
             self.source = source
             self.nick = nick
-            self.input = inpt
+            self.input = input
             self.output = output
             self.notice = notice
             self.hostmask = hostmask
