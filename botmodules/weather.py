@@ -461,7 +461,7 @@ def onecall(self, e, location="", hourly=False, daily=False):
             if results_json['hourly'][12]['weather'][0]['description'].title() != results_json['daily'][0]['weather'][0]['description'].title():
                 outlook = "%s -> %s" % (results_json['hourly'][12]['weather'][0]['description'].title(), results_json['daily'][0]['weather'][0]['description'].title())
             else:
-                ooutlook = results_json['hourly'][12]['weather'][0]['description'].title()
+                outlook = results_json['hourly'][12]['weather'][0]['description'].title()
 
         alert_urls = []
         if alerts:
