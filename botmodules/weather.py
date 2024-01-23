@@ -453,9 +453,15 @@ def onecall(self, e, location="", hourly=False, daily=False):
         
         # If the minute by minute outlook isn't available, grab the hourly
         try:
-            outlook = "%s -> %s " % (results_json['minutely'][0]['summary'].title(), results_json['daily'][0]['weather'][0]['description'].title())
+            if results_json['minutely'][0]['summary'].title() != results_json['daily'][0]['weather'][0]['description'].title():
+                outlook = "%s -> %s " % (results_json['minutely'][0]['summary'].title(), results_json['daily'][0]['weather'][0]['description'].title())
+            else:
+                outlook = results_json['minutely'][0]['summary'].title()
         except:
-            outlook = "%s -> %s" % (results_json['hourly'][12]['weather'][0]['description'].title(), results_json['daily'][0]['weather'][0]['description'].title())
+            if results_json['hourly'][12]['weather'][0]['description'].title() != results_json['daily'][0]['weather'][0]['description'].title():
+                outlook = "%s -> %s" % (results_json['hourly'][12]['weather'][0]['description'].title(), results_json['daily'][0]['weather'][0]['description'].title())
+            else:
+                ooutlook = results_json['hourly'][12]['weather'][0]['description'].title()
 
         alert_urls = []
         if alerts:
