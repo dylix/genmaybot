@@ -1,5 +1,6 @@
 import re
-
+import html
+import urllib
 
 def get_wiki(self, e, urlposted=False, forcemediawiki=False):
     #read the first paragraph of a wikipedia article
@@ -11,9 +12,8 @@ def get_wiki(self, e, urlposted=False, forcemediawiki=False):
         if searchterm == "":
             url = "http://en.wikipedia.org/wiki/Special:Random"
         else:
-            #searchterm = "site:wikipedia.org " + searchterm
-            #url = self.tools['google_url'](searchterm, "wikipedia.org/wiki")
-            url = f"https://en.wikipedia.org/wiki/{searchterm}"
+            searchterm = urllib.parse.quote(searchterm)
+            url = f'https://en.wikipedia.org/wiki/{searchterm}'
 
     title = ""
 
