@@ -113,7 +113,7 @@ class TestBot(SingleServerIRCBot):
 
 
         self.alerts(c)
-        #self.nick_recover(c)
+        self.nick_recover(c)
         self.irccontext = c
         c.who(c.get_nickname())
 
@@ -608,6 +608,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except KeyboardInterrupt:
+        logging.exception("Ctrl-C from console. Dying..")
     except:
         logging.exception("Exception in main thread, big trouble:")
-        sys.exit(1)
+    finally:
+        os._exit(1)
