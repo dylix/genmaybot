@@ -11,8 +11,9 @@ def get_wiki(self, e, urlposted=False, forcemediawiki=False):
         if searchterm == "":
             url = "http://en.wikipedia.org/wiki/Special:Random"
         else:
-            searchterm = "site:wikipedia.org " + searchterm
-            url = self.tools['google_url'](searchterm, "wikipedia.org/wiki")
+            #searchterm = "site:wikipedia.org " + searchterm
+            #url = self.tools['google_url'](searchterm, "wikipedia.org/wiki")
+            url = f"https://en.wikipedia.org/wiki/{searchterm}"
 
     title = ""
 
