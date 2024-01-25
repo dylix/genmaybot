@@ -48,18 +48,18 @@ def strava_get_token(user):
     """ Get an token by user """
     conn = sqlite3.connect('strava.sqlite')
     c = conn.cursor()
-    query = "SELECT token,refresh FROM tokens WHERE user= :user"
+    query = "SELECT token,refresh FROM tokens WHERE lower(user) = :user"
 
     try:
-        result = c.execute(query, {'user': user}).fetchone()
-    except:
-        return False
+        result = c.execute(query, {'user': user.lower()}).fetchone()
+    except Exception as err:
+        return None, None #False
     if result:
         c.close()
         return result[0], result[1]
     else:
         c.close()
-        return False
+        return None, None #False
 
 def strava_oath_code(self, e, state=None, code=None, error=None):
     strava_client_secret = self.botconfig["APIkeys"]["stravaClientSecret"]
@@ -388,6 +388,8 @@ def strava_ftp(self, e):
     strava_id = strava_get_athlete(e.nick)
     # set the token for the current user
     #token, refresh = strava_get_token(e.nick)
+    if not e.input:
+        e.input = ''
     if e.input.isdigit():
         try:
             if strava_is_valid_user(e.input):
@@ -495,8 +497,9 @@ strava_ftp.command = "!ftp"
 strava_ftp.helptext = "Shows the users FTP. 8====D"
 
 def strava_compare(self, e):
+    if not e.input:
+        e.input = ''
     participants = e.input.split(' ')
-
     if len(participants) > 1 or (participants[0] != e.nick and participants[0] != ''):
         participant_stats_list = []
         if len(participants) == 1:
@@ -895,7 +898,7 @@ def strava_command_handler(self, e):
     val_offset = 1
     function = None
 
-    arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'get': strava, 'set': strava_set_athlete,
+    arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'compare': strava_compare, 'ftp': strava_ftp, 'get': strava, 'set': strava_set_athlete,
                          'reset': strava_reset_athlete, 'inside': strava_inside, 'outside': strava_outside, 'ytd': strava_ytd, 'help': strava_help}
     arg_list = list(arg_function_dict.keys())
 
