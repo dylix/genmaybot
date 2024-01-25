@@ -11,7 +11,7 @@ import random
 import math
 
 # End Web server stuff
-def check_strava_token(self, user, token, refresh):
+def check_strava_token(self, user, token, refresh, returnAthlete = False):
     #print('checking token')
     url = "https://www.strava.com/api/v3/athlete"
     try:
@@ -37,12 +37,10 @@ def refresh_strava_token(self, user, token, refresh):
         response = urllib.request.urlopen(req, params)
         response = json.loads(response.read().decode('utf-8'))
         strava_insert_token(user, response['access_token'], response['refresh_token'])
-        #e.output = "Strava token exchange completed successfully. You can close this window now."
-        #return e
+        request_json.token = response['access_token']
+        request_json.refresh = response['refresh_token']
         return True
-    except:
-        #e.output = "Token exchange with Strava failed. Please try to authenticate again."
-        #return e
+    except Exception as err:
         return False
 
 def strava_get_token(user):
@@ -110,7 +108,6 @@ def strava_oauth_exchange(self, e):
     e.output = "Check your PM for further info to complete the auth process."
     return e
 
-
 # this is only needed if we ever have to change the strava token
 def set_stravatoken(line, nick, self, c):
     self.botconfig["APIkeys"]["stravaToken"] = line[12:]
@@ -124,7 +121,6 @@ def set_stravaclientid(line, nick, self, c):
         self.botconfig.write(configfile)
 set_stravaclientid.admincommand = "stravaclientid"
 
-
 def set_stravaclientsecret(line, nick, self, c):
     self.botconfig["APIkeys"]["stravaClientSecret"] = line[19:]
     with open('genmaybot.cfg', 'w') as configfile:
@@ -137,21 +133,6 @@ def __init__(self):
 
     strava_client_secret = self.botconfig["APIkeys"]["stravaClientSecret"]
     strava_client_id = self.botconfig["APIkeys"]["stravaClientId"]
-    #web_port = int(self.botconfig['webui']['port'])
-    #self.strava_web_port = web_port
-    #self.strava_web_host = "znc.00id.net"
-
-    ##Disable cherrypy logging to stdout, bind to all IPs, start in a separate thread
-    #cherrypy.engine.autoreload.on = True
-    #cherrypy.log.screen = False
-    #cherrypy.config.update({'server.socket_host': '0.0.0.0', 'server.socket_port': web_port})
-    #cherrypy.tree.mount(WebServer(strava_client_secret, strava_client_id), "/strava")
-
-    # wait a little bit for other instances to finish starting
-    #time.sleep(1.5)
-    #if not cherrypy.server.running:
-    #    thread = threading.Thread(target=cherrypy.server.start, )
-    #    thread.start()
 
 def request_json(url):
     #print('requesting json: ', url)
@@ -317,13 +298,13 @@ def strava(self, e):
     if e.input.isdigit():
         try:
             if strava_is_valid_user(e.input):
-                token, refresh = strava_get_token(e.nick)
-                valid_token = check_strava_token(self, e.nick, token, refresh)
+                token, refresh = strava_get_token(e.input)
+                valid_token = check_strava_token(self, e.input, token, refresh)
                 if valid_token == True:
                     request_json.token = token
                     request_json.refresh = refresh
                 elif valid_token == "refreshed":
-                    token, refresh = strava_get_token(e.nick)
+                    token, refresh = strava_get_token(e.input)
                     request_json.token = token
                     request_json.refresh = refresh
                 else:
@@ -334,8 +315,11 @@ def strava(self, e):
                 e.output = strava_extract_latest_ride(self, rides_response, e, e.input)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
     elif e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
@@ -358,8 +342,11 @@ def strava(self, e):
                     e.output = strava_extract_latest_ride(self, rides_response, e, athlete_id)
                 else:
                     e.output = "Sorry, that is not a valid Strava user."
-            except urllib.error.URLError:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (athlete_id)
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
         else:
             # We still have some sort of string, but it isn't numberic.
             e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
@@ -388,13 +375,126 @@ def strava(self, e):
                 e.output = strava_extract_latest_ride(self, rides_response, e, strava_id)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (strava_id)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
-def compare_strava(self, e):
+def strava_ftp(self, e):
+    strava_id = strava_get_athlete(e.nick)
+    # set the token for the current user
+    #token, refresh = strava_get_token(e.nick)
+    if e.input.isdigit():
+        try:
+            if strava_is_valid_user(e.input):
+                token, refresh = strava_get_token(e.input)
+                valid_token = check_strava_token(self, e.input, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.input)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                # Process a last ride request for a specific strava id.
+                #print('if digit id getting users stuff')
+                rides_response = request_json("https://www.strava.com/api/v3/athlete")
+                if rides_response['ftp'] == None or rides_response['ftp'] == 0:
+                    e.output = f"No FTP was found for {e.input}"
+                elif e.nick != e.input:
+                    e.output = f"Wow, {e.input} has a FTP of {rides_response['ftp']} watts. {e.nick}, aren't you jealous?"
+                else:
+                    e.output = f"{e.input}, your FTP is only {rides_response['ftp']} watts. Time to harden the fuck up!"
+            else:
+                e.output = "Sorry, that is not a valid Strava user."
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve FTP from Strava ID: %s. Too many API requests" % (e.input)
+            else:
+                e.output = "Unable to retrieve FTP from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+    elif e.input:
+        athlete_id = strava_get_athlete(e.input)
+        if athlete_id:
+            try:
+                # set the token for the provided user, if we have it
+                token, refresh = strava_get_token(e.input)
+                valid_token = check_strava_token(self, e.input, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.input)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                if strava_is_valid_user(athlete_id):
+                    # Process a last ride request for a specific strava id.
+                    rides_response = request_json("https://www.strava.com/api/v3/athlete")
+                    if rides_response['ftp'] == None or rides_response['ftp'] == 0:
+                        e.output = f"No FTP was found for {e.input}"
+                    elif e.nick != athlete_id:
+                        e.output = f"Wow, {e.input} has a FTP of {rides_response['ftp']} watts. {e.nick}, aren't you jealous?"
+                    else:
+                        e.output = f"{e.input}, your FTP is only {rides_response['ftp']} watts. Time to harden the fuck up!"
+                else:
+                    e.output = "Sorry, that is not a valid Strava user."
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve FTP from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve FTP from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        else:
+            # We still have some sort of string, but it isn't numberic.
+            e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
+    elif strava_id:
+        try:
+            if strava_is_valid_user(strava_id):
+                # Process the last ride for the current strava id.
+                
+                # set the token for the provided user, if we have it
+                if (e.input == ''):
+                    username = e.nick
+                else:
+                    username = e.input
+                token, refresh = strava_get_token(username)
+                valid_token = check_strava_token(self, username, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(username)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                else:
+                    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
+                rides_response = request_json("https://www.strava.com/api/v3/athlete")
+                if rides_response['ftp'] == None or rides_response['ftp'] == 0:
+                    e.output = f"No FTP was found for {e.input}"
+                elif e.nick != username:
+                    e.output = f"Wow, {username} has a FTP of {rides_response['ftp']} watts. {e.nick}, aren't you jealous?"
+                else:
+                    e.output = f"{username}, your FTP is only {rides_response['ftp']} watts. Time to harden the fuck up!"
+            else:
+                e.output = "Sorry, that is not a valid Strava user."
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (strava_id)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+    else:
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
+    return e
+strava_ftp.command = "!ftp"
+strava_ftp.helptext = "Shows the users FTP. 8====D"
+
+def strava_compare(self, e):
     participants = e.input.split(' ')
 
     if len(participants) > 1 or (participants[0] != e.nick and participants[0] != ''):
@@ -423,11 +523,11 @@ def compare_strava(self, e):
 
         for participant in participant_stats_list:
             et = datetime.timedelta(seconds=float(participant.elapsed_time))
-            elapsedTime = "{}h:{}m".format((et.days*24)+et.seconds//3600, (et.seconds//60)%60)
+            elapsedTime = "{:02}h:{:02}m".format((et.days*24)+et.seconds//3600, (et.seconds//60)%60)
             mt = datetime.timedelta(seconds=float(participant.moving_time))
-            movingTime = "{}h:{}m".format((mt.days*24)+mt.seconds//3600, (mt.seconds//60)%60)
+            movingTime = "{:02}h:{:02}m".format((mt.days*24)+mt.seconds//3600, (mt.seconds//60)%60)
             it = datetime.timedelta(seconds=float(participant.elapsed_time - participant.moving_time))
-            idleTime = "{}h:{}m".format((it.days*24)+it.seconds//3600, (it.seconds//60)%60)
+            idleTime = "{:02}h:{:02}m".format((it.days*24)+it.seconds//3600, (it.seconds//60)%60)
             e.output += f"{participant.name}'s Activities: {participant.count} | Distance: {math.trunc(strava_convert_meters_to_miles(participant.distance))} mi | Elevation: {math.trunc(strava_convert_meters_to_feet(participant.elevation_gain))} ft | Moving Time: {movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing: {idleTime}\n"
         
         participant_stats_list_sorted = sorted(participant_stats_list, key=lambda x: x.distance, reverse=True)
@@ -440,13 +540,25 @@ def compare_strava(self, e):
             else:
                 athlete += 1
                 e.output += f" | That's {math.trunc(strava_convert_meters_to_miles((participant_stats_list_sorted[0].distance - participant.distance)))} miles more than {participant.name}"
+        
+        #elevation winner
+        athlete = 0
+        participant_stats_list_sorted = sorted(participant_stats_list, key=lambda x: x.elevation_gain, reverse=True)
+        for participant in participant_stats_list_sorted:
+            if athlete == 0:
+                athlete += 1
+                e.output += f"\n{participant.name} is winning with: {math.trunc(strava_convert_meters_to_feet(participant.elevation_gain))} feet"
+            else:
+                athlete += 1
+                e.output += f" | That's {math.trunc(strava_convert_meters_to_feet((participant_stats_list_sorted[0].elevation_gain - participant.elevation_gain)))} feet more than {participant.name}"
+        
         return e
         
     elif participants[0] == '' or participants[0] == e.nick:
         e.output = "Sorry %s, You need something to compare it to. At the very least !compare someothernick" % (e.nick)
         return e
-compare_strava.command = "!compare"
-compare_strava.helptext = "Usage: !compare nick1 nick2. Compares users year to date stats."
+strava_compare.command = "!compare"
+strava_compare.helptext = "Usage: !compare nick1 nick2. Compares users year to date stats."
 
 def strava_ytd(self, e, return_response = False):
     strava_id = strava_get_athlete(e.nick)
@@ -478,8 +590,11 @@ def strava_ytd(self, e, return_response = False):
                     e.output = strava_extract_ytd_stats(self, stats_response, e, e.input)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
     elif e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
@@ -505,8 +620,11 @@ def strava_ytd(self, e, return_response = False):
                         e.output = strava_extract_ytd_stats(self, stats_response, e, athlete_id)
                 else:
                     e.output = "Sorry, that is not a valid Strava user."
-            except urllib.error.URLError:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (athlete_id)
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
         else:
             # We still have some sort of string, but it isn't numberic.
             e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
@@ -538,8 +656,11 @@ def strava_ytd(self, e, return_response = False):
                     e.output = strava_extract_ytd_stats(self, stats_response, e, strava_id)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (username)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (username)
     else:
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
@@ -577,8 +698,11 @@ def strava_inside(self, e):
                 e.output = strava_extract_inside(self, stats_response, e, e.input, username)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
     elif e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
@@ -604,8 +728,11 @@ def strava_inside(self, e):
                     e.output = strava_extract_inside(self, stats_response, e, athlete_id, username)
                 else:
                     e.output = "Sorry, that is not a valid Strava user."
-            except urllib.error.URLError:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (athlete_id)
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
         else:
             # We still have some sort of string, but it isn't numberic.
             e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
@@ -636,8 +763,11 @@ def strava_inside(self, e):
                 e.output = strava_extract_inside(self, stats_response, e, strava_id, username)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (strava_id)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
@@ -675,8 +805,11 @@ def strava_outside(self, e):
                 e.output = strava_extract_outside(self, stats_response, e, e.input, username)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
     elif e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
@@ -702,8 +835,11 @@ def strava_outside(self, e):
                     e.output = strava_extract_outside(self, stats_response, e, athlete_id, username)
                 else:
                     e.output = "Sorry, that is not a valid Strava user."
-            except urllib.error.URLError:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (athlete_id)
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
         else:
             # We still have some sort of string, but it isn't numberic.
             e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
@@ -734,8 +870,11 @@ def strava_outside(self, e):
                 e.output = strava_extract_outside(self, stats_response, e, strava_id, username)
             else:
                 e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError:
-            e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (strava_id)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
@@ -831,11 +970,11 @@ def strava_extract_ytd_stats(self, response, e, athlete_id=None):
                 athlete_info = None
 
             et = datetime.timedelta(seconds=float(ytd_ride_totals['elapsed_time']))
-            elapsedTime = "{}:{}".format((et.days*24)+et.seconds//3600, (et.seconds//60)%60)
+            elapsedTime = "{:02}h:{:02}m".format((et.days*24)+et.seconds//3600, (et.seconds//60)%60)
             mt = datetime.timedelta(seconds=float(ytd_ride_totals['moving_time']))
-            movingTime = "{}:{}".format((mt.days*24)+mt.seconds//3600, (mt.seconds//60)%60)
+            movingTime = "{:02}h:{:02}m".format((mt.days*24)+mt.seconds//3600, (mt.seconds//60)%60)
             it = datetime.timedelta(seconds=float(ytd_ride_totals['elapsed_time'] - ytd_ride_totals['moving_time']))
-            idleTime = "{}:{}".format((it.days*24)+it.seconds//3600, (it.seconds//60)%60)
+            idleTime = "{:02}h:{:02}m".format((it.days*24)+it.seconds//3600, str((it.seconds//60)%60))
             
             if measurement_pref == "feet" or athlete_id == None or measurement_pref == None:
                 return f"Activities: {ytd_ride_totals['count']} | Distance: {math.trunc(strava_convert_meters_to_miles(ytd_ride_totals['distance']))} mi | Elevation: {math.trunc(strava_convert_meters_to_feet(ytd_ride_totals['elevation_gain']))} ft | Moving Time: {movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing: {idleTime}"

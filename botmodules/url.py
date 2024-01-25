@@ -20,8 +20,8 @@ def url_parser(self, e):
             url = "http://" + url
         e.input = url
         
-        title = url_posted(self,e)
-        return None #url_posted(self, e)
+        #title = url_posted(self,e)
+        return url_posted(self, e)
     else:
         return None
 url_parser.lineparser = True
@@ -140,13 +140,9 @@ def url_posted(self, e, titlecall=False):
 
 
 def get_title(self, e, url):
-    length = 51200
-    if url.find("amazon.") != -1:
-        length = 100096  # because amazon is coded like shit
-    page = self.tools["load_html_from_url"](url, length)
+    page = self.tools["load_html_from_url"](url)
     title = ""
     meta_title = ""
-    
 
     if page and page.find('meta', attrs={'name': "generator", 'content': re.compile("MediaWiki", re.I)}):
         try:
