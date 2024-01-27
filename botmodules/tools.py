@@ -33,6 +33,24 @@ def decode_htmlentities(string):
     entity_re = re.compile("&(#?)(x?)(\w+);")
     return entity_re.subn(substitute_entity, string)[0]
 
+def insert_at_closest_space(text):
+    max_length = 360
+    char = '\n'
+    current_length = 0
+    last_space_index = -1
+    result = ""
+
+    for i, c in enumerate(text):
+        if c == ' ':
+            if current_length + i - last_space_index > max_length:
+                result += char
+                current_length = 0
+            last_space_index = i
+        current_length += 1
+        result += c
+
+    return result
+
 def insert_newline(original_string):
     interval = 360
     character_to_insert = '\n'

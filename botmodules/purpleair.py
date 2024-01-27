@@ -37,7 +37,7 @@ def distance(lat1, lon1, lat2, lon2):
 
 def getPurpleAirList():
     USER_AGENT = f"airqualityBot/v1 (https://dylix.org)"
-    HEADERS = {"User-Agent": USER_AGENT, "Accept": "application/json", "X-API-Key": "CCF6ADE0-0747-11EC-BAD6-42010A800017"}
+    HEADERS = {"User-Agent": USER_AGENT, "Accept": "application/json", "X-API-Key": f"{api_key}"}
     response = requests.get(f"https://api.purpleair.com/v1/sensors?fields=latitude,longitude&location_type=0", headers=HEADERS)
     return response.json()
 

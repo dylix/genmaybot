@@ -91,7 +91,8 @@ class Zwift:
         portal_map_xml = urllib.request.urlopen('https://cdn.zwift.com/gameassets/PortalRoadSchedule_v1.xml').read().decode('utf-8')
         self.portal_map_xml = xmltodict.parse(portal_map_xml)
 
-    def current(self, now=datetime.datetime.now(datetime.timezone.utc)):
+    def current(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
         latest_stamp = None
         current_appointment = None
         for appointment in self.map_xml['MapSchedule']['appointments']['appointment']:
@@ -101,7 +102,8 @@ class Zwift:
                 latest_stamp = starts_at
         return current_appointment
 
-    def current_portal(self, now=datetime.datetime.now(datetime.timezone.utc)):
+    def current_portal(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
         latest_stamp = None
         current_appointment = None
         for appointment in self.portal_map_xml['PortalRoads']['PortalRoadSchedule']['appointments']['appointment']:
@@ -111,7 +113,8 @@ class Zwift:
                 latest_stamp = starts_at
         return current_appointment
 
-    def monthly_portal(self, now=datetime.datetime.now(datetime.timezone.utc)):
+    def monthly_portal(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
         latest_stamp = None
         current_appointment = None
         for appointment in self.portal_map_xml['PortalRoads']['PortalRoadSchedule']['appointments']['appointment']:
@@ -123,7 +126,8 @@ class Zwift:
                     latest_stamp = starts_at
         return current_appointment
 
-    def next(self, now=datetime.datetime.now(datetime.timezone.utc)):
+    def next(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
         earliest_stamp = None
         next_appointment = None
         for appointment in self.map_xml['MapSchedule']['appointments']['appointment']:
@@ -133,7 +137,8 @@ class Zwift:
                 earliest_stamp = starts_at
         return next_appointment
 
-    def next_portal(self, now=datetime.datetime.now(datetime.timezone.utc)):
+    def next_portal(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
         earliest_stamp = None
         next_appointment = None
         for appointment in self.portal_map_xml['PortalRoads']['PortalRoadSchedule']['appointments']['appointment']:
@@ -200,7 +205,8 @@ class Zwift:
         else:
             return None
 
-    def find_next_map_datetime(self, course, now=datetime.datetime.now(datetime.timezone.utc)):
+    def find_next_map_datetime(self):
+        now = datetime.datetime.now(datetime.timezone.utc)
         course = course.upper()
         earliest_stamp = None
         next_starts_at = None
@@ -211,7 +217,8 @@ class Zwift:
                 earliest_stamp = starts_at
         return next_starts_at
 
-    def find_next_portal_map_datetime(self, course, now=datetime.datetime.now(datetime.timezone.utc)):
+    def find_next_portal_map_datetime(self, course):
+        now = datetime.datetime.now(datetime.timezone.utc)
         course = course.upper()
         earliest_stamp = None
         next_starts_at = None

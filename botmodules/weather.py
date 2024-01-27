@@ -342,10 +342,10 @@ def onecall(self, e, location="", hourly=False, daily=False):
 
         if country != "US":
             world_weather = world_weather[0:-1]
-            e.output = self.tools['insert_newline'](world_weather)
+            e.output = self.tools['insert_at_closest_space'](world_weather)
         else:
             us_weather = us_weather[0:-1]
-            e.output = self.tools['insert_newline'](us_weather)
+            e.output = self.tools['insert_at_closest_space'](us_weather)
         return e
     elif daily:
         us_weather = f"{address}"
@@ -387,10 +387,10 @@ def onecall(self, e, location="", hourly=False, daily=False):
                 us_weather += f" {forecast_day} L:{int(day['temp']['min'])}°F/H:{int(day['temp']['max'])}°F {precip_chance}{day_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph {summary_icon}{day['weather'][0]['description']} /"
         if country != "US":
             world_weather = world_weather[0:-1]
-            e.output = self.tools['insert_newline'](world_weather)
+            e.output = self.tools['insert_at_closest_space'](world_weather)
         else:
             us_weather = us_weather[0:-1]
-            e.output = self.tools['insert_newline'](us_weather)
+            e.output = self.tools['insert_at_closest_space'](us_weather)
         return e
     else:
         temp = current_conditions['temp']
