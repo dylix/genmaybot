@@ -169,7 +169,7 @@ class Zwift:
         if current_appointment['@road']:
             for portal in self.portal_map_xml['PortalRoads']['PortalRoadMetadataCollections']['PortalRoadMetadata']:
                 if portal['@id'] == current_appointment['@road']:
-                    return portal['@name']
+                    return f"{portal['@name']} ({round(float(portal['@distanceCentimeters'])/160900,2)} miles {round(float(portal['@elevCentimeters'])/30.48,0)} feet)"
         else:
             return None
 

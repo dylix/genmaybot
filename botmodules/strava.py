@@ -299,32 +299,7 @@ def strava(self, e):
     strava_id = strava_get_athlete(e.nick)
     # set the token for the current user
     #token, refresh = strava_get_token(e.nick)
-    if e.input.isdigit():
-        try:
-            if strava_is_valid_user(e.input):
-                token, refresh = strava_get_token(e.input)
-                valid_token = check_strava_token(self, e.input, token, refresh)
-                if valid_token == True:
-                    request_json.token = token
-                    request_json.refresh = refresh
-                elif valid_token == "refreshed":
-                    token, refresh = strava_get_token(e.input)
-                    request_json.token = token
-                    request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-                # Process a last ride request for a specific strava id.
-                #print('if digit id getting users stuff')
-                rides_response = request_json("https://www.strava.com/api/v3/athletes/%s/activities?per_page=1" % e.input)
-                e.output = strava_extract_latest_ride(self, rides_response, e, e.input)
-            else:
-                e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError as err:
-            if err.code == 429:
-                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
-            else:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
-    elif e.input:
+    if e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
             try:
@@ -338,8 +313,6 @@ def strava(self, e):
                     token, refresh = strava_get_token(e.input)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 if strava_is_valid_user(athlete_id):
                     # Process a last ride request for a specific strava id.
                     rides_response = request_json("https://www.strava.com/api/v3/athletes/%s/activities?per_page=1" % athlete_id)
@@ -373,8 +346,6 @@ def strava(self, e):
                     token, refresh = strava_get_token(username)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 rides_response = request_json("https://www.strava.com/api/v3/athletes/%s/activities?per_page=1" % strava_id)
                 e.output = strava_extract_latest_ride(self, rides_response, e, strava_id)
             else:
@@ -394,37 +365,7 @@ def strava_ftp(self, e):
     #token, refresh = strava_get_token(e.nick)
     if not e.input:
         e.input = ''
-    if e.input.isdigit():
-        try:
-            if strava_is_valid_user(e.input):
-                token, refresh = strava_get_token(e.input)
-                valid_token = check_strava_token(self, e.input, token, refresh)
-                if valid_token == True:
-                    request_json.token = token
-                    request_json.refresh = refresh
-                elif valid_token == "refreshed":
-                    token, refresh = strava_get_token(e.input)
-                    request_json.token = token
-                    request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-                # Process a last ride request for a specific strava id.
-                #print('if digit id getting users stuff')
-                rides_response = request_json("https://www.strava.com/api/v3/athlete")
-                if rides_response['ftp'] == None or rides_response['ftp'] == 0:
-                    e.output = f"No FTP was found for {e.input}"
-                elif e.nick != e.input:
-                    e.output = f"Wow, {e.input} has a FTP of {rides_response['ftp']} watts. {e.nick}, aren't you jealous?"
-                else:
-                    e.output = f"{e.input}, your FTP is only {rides_response['ftp']} watts. Time to harden the fuck up!"
-            else:
-                e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError as err:
-            if err.code == 429:
-                e.output = "Unable to retrieve FTP from Strava ID: %s. Too many API requests" % (e.input)
-            else:
-                e.output = "Unable to retrieve FTP from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
-    elif e.input:
+    if e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
             try:
@@ -438,8 +379,6 @@ def strava_ftp(self, e):
                     token, refresh = strava_get_token(e.input)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 if strava_is_valid_user(athlete_id):
                     # Process a last ride request for a specific strava id.
                     rides_response = request_json("https://www.strava.com/api/v3/athlete")
@@ -574,35 +513,7 @@ def strava_ytd(self, e, return_response = False):
     if not e.input:
         e.input = ''
 
-    if e.input.isdigit():
-        try:
-            if strava_is_valid_user(e.input):
-                token, refresh = strava_get_token(e.nick)
-                valid_token = check_strava_token(self, e.nick, token, refresh)
-                if valid_token == True:
-                    request_json.token = token
-                    request_json.refresh = refresh
-                elif valid_token == "refreshed":
-                    token, refresh = strava_get_token(e.nick)
-                    request_json.token = token
-                    request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-                # Process a last ride request for a specific strava id.
-                #print('if digit id getting users stuff')
-                stats_response = request_json("https://www.strava.com/api/v3/athletes/%s/stats" % e.input)
-                if return_response:
-                    return stats_response
-                else:
-                    e.output = strava_extract_ytd_stats(self, stats_response, e, e.input)
-            else:
-                e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError as err:
-            if err.code == 429:
-                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
-            else:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
-    elif e.input:
+    if e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
             try:
@@ -616,8 +527,6 @@ def strava_ytd(self, e, return_response = False):
                     token, refresh = strava_get_token(e.input)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 if strava_is_valid_user(athlete_id):
                     # Process a last ride request for a specific strava id.
                     stats_response = request_json("https://www.strava.com/api/v3/athletes/%s/stats" % athlete_id)
@@ -654,8 +563,6 @@ def strava_ytd(self, e, return_response = False):
                     token, refresh = strava_get_token(username)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 stats_response = request_json("https://www.strava.com/api/v3/athletes/%s/stats" % strava_id)
                 if return_response:
                     return stats_response
@@ -682,35 +589,7 @@ def strava_inside(self, e):
     #length of time to search
     search_history_timestamp = datetime.datetime.now() - datetime.timedelta(days=21, hours=0)
     search_history_timestamp = search_history_timestamp.timestamp()
-    if e.input.isdigit():
-        try:
-            if strava_is_valid_user(e.input):
-                username = e.input
-                token, refresh = strava_get_token(e.nick)
-                valid_token = check_strava_token(self, e.nick, token, refresh)
-                if valid_token == True:
-                    request_json.token = token
-                    request_json.refresh = refresh
-                elif valid_token == "refreshed":
-                    token, refresh = strava_get_token(e.nick)
-                    request_json.token = token
-                    request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-                # Process a last ride request for a specific strava id.
-                #print('if digit id getting users stuff')
-                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{e.input}/activities?per_page=200&after={search_history_timestamp}')
-                #stats_response = request_json("https://dylix.org/test.json")
-                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
-                e.output = strava_extract_inside(self, stats_response, e, e.input, username)
-            else:
-                e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError as err:
-            if err.code == 429:
-                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
-            else:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
-    elif e.input:
+    if e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
             try:
@@ -725,8 +604,6 @@ def strava_inside(self, e):
                     token, refresh = strava_get_token(e.input)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 if strava_is_valid_user(athlete_id):
                     # Process a last ride request for a specific strava id.
                     stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{athlete_id}/activities?per_page=200&after={search_history_timestamp}')
@@ -762,8 +639,6 @@ def strava_inside(self, e):
                     token, refresh = strava_get_token(username)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{strava_id}/activities?per_page=200&after={search_history_timestamp}')
                 #stats_response = request_json("https://dylix.org/test.json")
                 stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
@@ -789,35 +664,7 @@ def strava_outside(self, e):
     #length of time to search
     search_history_timestamp = datetime.datetime.now() - datetime.timedelta(days=21, hours=0)
     search_history_timestamp = search_history_timestamp.timestamp()
-    if e.input.isdigit():
-        try:
-            if strava_is_valid_user(e.input):
-                username = e.input
-                token, refresh = strava_get_token(e.nick)
-                valid_token = check_strava_token(self, e.nick, token, refresh)
-                if valid_token == True:
-                    request_json.token = token
-                    request_json.refresh = refresh
-                elif valid_token == "refreshed":
-                    token, refresh = strava_get_token(e.nick)
-                    request_json.token = token
-                    request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
-                # Process a last ride request for a specific strava id.
-                #print('if digit id getting users stuff')
-                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{e.input}/activities?per_page=200&after={search_history_timestamp}')
-                #stats_response = request_json("https://dylix.org/test.json")
-                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
-                e.output = strava_extract_outside(self, stats_response, e, e.input, username)
-            else:
-                e.output = "Sorry, that is not a valid Strava user."
-        except urllib.error.URLError as err:
-            if err.code == 429:
-                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
-            else:
-                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
-    elif e.input:
+    if e.input:
         athlete_id = strava_get_athlete(e.input)
         if athlete_id:
             try:
@@ -832,8 +679,6 @@ def strava_outside(self, e):
                     token, refresh = strava_get_token(e.input)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 if strava_is_valid_user(athlete_id):
                     # Process a last ride request for a specific strava id.
                     stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{athlete_id}/activities?per_page=200&after={search_history_timestamp}')
@@ -869,8 +714,6 @@ def strava_outside(self, e):
                     token, refresh = strava_get_token(username)
                     request_json.token = token
                     request_json.refresh = refresh
-                #else:
-                #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
                 stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{strava_id}/activities?per_page=200&after={search_history_timestamp}')
                 #stats_response = request_json("https://dylix.org/test.json")
                 stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
