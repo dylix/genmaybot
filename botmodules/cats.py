@@ -15,7 +15,6 @@ def get_fern(self, e):
     return e
 get_fern.command = "!fern"
 
-
 def get_rat(self, e):
     url = "http://www.reddit.com/r/rats/.json"
     e.output = get_redditpics(url)
