@@ -70,13 +70,12 @@ def get_redditpics(url):
     cats = json.loads(response.decode('utf-8'))
     catlist = []
     for cat in cats['data']['children']:
-        if 'jpg' in cat['data']['url'] or 'imgur.com' in cat['data']['url']:
+        if 'jpg' in cat['data']['url'] or 'imgur.com' in cat['data']['url'] or 'jpeg' in cat['data']['url'] or 'v.redd.it' in cat['data']['url']:
             pic_title = cat['data']['title']
             pic_title = pic_title.replace('\n', '')
             if cat['data']['over_18']:
                 pic_title = "=NSFW= " + pic_title
             catlist.append(cat['data']['url'] + " - " + pic_title)
-
     cats = catlist.pop(random.randint(0, len(catlist) - 1)) + " :: " + catlist.pop(random.randint(0, len(catlist) - 1))
     return cats
 
@@ -96,17 +95,4 @@ def get_grimace(self, e):
     e.output = "https://i.imgur.com/yyvBaOC.jpg"
     return e
 get_grimace.command = "!grimace"
-
-
-def faptain(self, e):
-    e.output = "FaptainAwesome to the rescue!"
-    return e
-
-faptain.command = "!fap"
-
-def epoop(self, e):
-    e.output = "https://i.imgflip.com/2el2zw.jpg"
-    return e
-
-epoop.command = "!epon"
 
