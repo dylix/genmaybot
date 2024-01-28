@@ -8,39 +8,38 @@ def get_newest_rss(self, url):
 ## Retreive an RSS feed and get the newest item
 ## Then, nicely format the title and description, and add a shortened URL
 
-    dom = xml.dom.minidom.parse(urllib.request.urlopen(url))
-    newest_news = dom.getElementsByTagName('item')[0]
-    title = newest_news.getElementsByTagName('title')[0].childNodes[0].data
-    description = BeautifulSoup(newest_news.getElementsByTagName('description')[0].childNodes[0].data, "html.parser")
+    formatted_description = ''
+    for index in range(3):
+        dom = xml.dom.minidom.parse(urllib.request.urlopen(url))
+        newest_news = dom.getElementsByTagName('item')[index]
+        title = newest_news.getElementsByTagName('title')[0].childNodes[0].data
+        description = BeautifulSoup(newest_news.getElementsByTagName('description')[0].childNodes[0].data, "html.parser")
 
-    updated = dom.getElementsByTagName('pubDate')[0].childNodes[0].data
-    updated = datetime.datetime.fromtimestamp(time.mktime(parsedate(updated)))
-    ago = round((datetime.datetime.utcnow() - updated).seconds/60)
+        updated = dom.getElementsByTagName('pubDate')[index].childNodes[0].data
+        updated = datetime.datetime.fromtimestamp(time.mktime(parsedate(updated)))
+        ago = round((datetime.datetime.utcnow() - updated).seconds/60)
 
+        links = description.findAll('a')
+        for link in links:
+            link.extract()
+        links = description.findAll(color='#6f6f6f')
+        for link in links:
+            link.extract()
 
+        title = title.strip()
 
-    links = description.findAll('a')
-    for link in links:
-        link.extract()
-    links = description.findAll(color='#6f6f6f')
-    for link in links:
-        link.extract()
+        description = str(description)
+        description = description.replace("\n", "")
 
-    title = title.strip()
+        description = self.tools['remove_html_tags'](description)
+        description = description.strip()
+        if description.rfind(".") != -1:
+            description = description[0:description.rfind(".") + 1]
 
-    description = str(description)
-    description = description.replace("\n", "")
+        link = self.tools['shorten_url'](newest_news.getElementsByTagName('link')[0].childNodes[0].data)
+        formatted_description += "#%s: %s - %s [ %s ] " % (index+1, title, description[:75], link)
 
-    description = self.tools['remove_html_tags'](description)
-    description = description.strip()
-    if description.rfind(".") != -1:
-        description = description[0:description.rfind(".") + 1]
-
-    link = self.tools['shorten_url'](newest_news.getElementsByTagName('link')[0].childNodes[0].data)
-
-    description = "%s - %s [ %s ]" % (title, description, link)
-
-    return description, updated, ago
+    return formatted_description, updated, ago
 
 
 def google_news(self, e):
@@ -58,7 +57,7 @@ def google_news(self, e):
 
     return e
 
-google_news.command = "!news"
+google_news.command = "!googlenews"
 google_news.helptext = "Usage: !news - reports the top story. !news <query> reports news containing the specified words"
 
 def get_breaking(self, e):
@@ -123,3 +122,14 @@ def npr_music(self, e):
 
 npr_music.command="!music"
 npr_music.helptext="Usage: !music\nShows the latest music listing from NPR's Discover Music song of the day"
+
+def cycling_news(self, e):
+    ## Grab the latest entry from the NPR headlines RSS feed
+    url = "https://feeds2.feedburner.com/cyclingnews/news"
+    description, updated, ago = get_newest_rss(self,url)
+    #e.output = description
+    e.output = self.tools['insert_at_closest_space'](description)
+    return e
+
+cycling_news.command="!news"
+cycling_news.helptext="Usage: !news\nShows the latest entry from the cyclingnews RSS feed"
