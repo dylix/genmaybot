@@ -5,16 +5,9 @@ import sqlite3
 from bs4 import BeautifulSoup
 
 def url_parser(self, e):
-
     url = re.search(r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>])*\))+(?:\(([^\s()<>])*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))", e.input)
     #http://daringfireball.net/2010/07/improved_regex_for_matching_urls
     if url:
-        
-        #jmaister is a fun hating nazi op who enjoys looking at dead cyclists
-        #if "duck" in e.nick.lower():
-        #    e.output="shut your fuck {}".format(e.nick)
-        #    return e
-        
         url = url.group(0)
         if url[0:4].lower() != "http":
             url = "http://" + url
@@ -26,15 +19,12 @@ def url_parser(self, e):
         return None
 url_parser.lineparser = True
 
-
 def url_posted(self, e, titlecall=False):
     url = e.input
     #checks if the URL is a dupe (if mysql is enabled)
     #detects if a wikipedia or imdb url is posted and does the appropriate command for it
-
     repost = ""
     days = ""
-
     urlhash = hashlib.sha224(url.encode()).hexdigest()
     conn = sqlite3.connect("links.sqlite")
     cursor = conn.cursor()
@@ -49,11 +39,9 @@ def url_posted(self, e, titlecall=False):
     if result and result[0] != 0:
         url = result[2]
         repost = "LOL REPOST %s " % (result[0] + 1)
-
         orig = datetime.datetime.strptime(result[1], "%Y-%m-%d %H:%M:%S")
         now = datetime.datetime.utcnow()
         delta = now - orig
-
         plural = ""
         if delta.days > 0:
             if delta.days > 1:
@@ -73,9 +61,7 @@ def url_posted(self, e, titlecall=False):
                 if hrs > 1:
                     plural = "s"
                 days = " (posted %s hour%s ago)" % (str(hrs), plural)
-
     title = ""
-
     try:
         wiki = self.bangcommands["!wiki"](self, e, True)
         title = wiki.output
@@ -101,9 +87,6 @@ def url_posted(self, e, titlecall=False):
 
     if not titlecall:
         cursor.execute("""UPDATE OR IGNORE links SET reposted=reposted+1 WHERE hash = ?""", [urlhash])
-
-
-
 
     cursor.execute("""INSERT OR IGNORE INTO links(url, hash) VALUES (?,?)""", (url, urlhash))
     conn.commit()
@@ -131,13 +114,9 @@ def url_posted(self, e, titlecall=False):
         url = ""
     else:
         url = " ( {} )".format(url)
-
         e.output = "%s%s%s%s" % (repost, title, days, url)
-
     conn.close()
-
     return e
-
 
 def get_title(self, e, url):
     page = self.tools["load_html_from_url"](url)
@@ -170,8 +149,6 @@ def get_title(self, e, url):
         except:
             pass
         return title
-
-
 
 def last_title(self, e):
     #displays the title of the last link posted (requires sql)
@@ -216,22 +193,3 @@ def last_link(self, e):
 
 last_link.command = "!lastlink"
 last_link.helptext = "Usage: !lastlink\nShows the last URL that was posted in the channel"
-
-class TestEvent(object):
-    input = "https://snoonet.org/"
-    output = ""
-
-
-if __name__ == "__main__":
-    import tools as tools_module
-
-    testevent = TestEvent()
-    testevent.tools = tools_module.__dict__
-    print("Testing url_parser with URL: {}".format(testevent.input))
-    url_parser(testevent, testevent)
-
-    print("Testing last_link with URL: {}".format(testevent.input))
-    print("last_link returned: {}".format(last_link(testevent, testevent).output))
-    print("last_title returned: {}".format(last_title(testevent, testevent).output))
-
-
