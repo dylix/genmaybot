@@ -11,85 +11,6 @@ try:
 except ImportError:
     user = None
 
-#TODO.. example
-# FOR WEATHER FORECASTS WHEN LONG MSGS
-
-# Shorten the title to fit perfectly in the IRC 510-character per line limit
-# To do so properly, you have to convert to utf-8 because of double-byte characters
-# The protocol garbage before the real message is
-# :<nick>!<realname>@<hostname> PRIVMSG <target> :
-'''
-maxlen = 510 - len(":{}!{}@{} PRIVMSG {} : [ {} ]".format(e.botnick,
-                                                          self.realname,
-                                                          self.hostname,
-                                                          e.source, url))
-title = title[0:maxlen]
-'''
-
-def google_geocode(self, address):
-    gapikey = self.botconfig["APIkeys"]["shorturlkey"] #This uses the same Google API key as URL shortener
-    address = urllib.parse.quote(address)
-
-    url = "https://maps.googleapis.com/maps/api/geocode/json?address={}&key={}"
-    url = url.format(address, gapikey)
-
-
-    try:
-        request = urllib.request.Request(url, None, {'Referer': 'http://irc.00id.net'})
-        response = urllib.request.urlopen(request)
-    except urllib.error.HTTPError as err:
-        self.logger.exception("Exception in google_geocode:")
-
-    try:
-        results_json = json.loads(response.read().decode('utf-8'))
-        status = results_json['status']
-
-        if status != "OK":
-            raise
-
-        city, state, country, poi = "","","", ""
-        
-        for component in results_json['results'][0]['address_components']:
-            if 'locality' in component['types']:
-                city = component['long_name']
-            elif 'point_of_interest' in component['types'] or 'natural_feature' in component['types']:
-                poi = component['long_name']
-            elif 'administrative_area_level_1' in component['types']:
-                state = component['short_name']
-            elif 'country' in component['types']:
-                if component['short_name'] != "US":                
-                    country = component['long_name']
-                else:
-                    country = False
-
-        if not city:
-            city = poi #if we didn't find a city, maybe there was a POI or natural feature entry, so use that instead
-
-        if not country: #Only show the state if in the US
-            country == ""
-        elif country != "Canada" and city:               #We don't care about provinces outside of the US and Canada, unless the city name is empty
-            state = ""
-
-        if city:
-            formatted_address = "{}{}{}".format(city,"" if not state else ", " + state,"" if not country else ", " + country)
-        elif state:
-            formatted_address = "{}{}".format(state,"" if not country else ", " + country)
-        else:
-            formatted_address = "{}".format("" if not country else country)
-        
-        
-        lng = results_json['results'][0]['geometry']['location']['lng']
-        lat = results_json['results'][0]['geometry']['location']['lat']
-
-
-        
-    except:
-        self.logger.exception("Failed to geocode location using Google API:")
-
-        return
-    
-    return formatted_address, lat, lng, country
-
 def bearing_to_compass(bearing):
     dirs = {}        
     dirs['N'] = (348.75, 11.25)
@@ -138,8 +59,6 @@ def bearing_to_arrow(bearing):
             return '↓'
 
 def weather_summary_to_icon(icon):
-    #do we really need emojis?
-    return ""
     '''icons = {
         "cloudy": "\U00002601",
         "partly-cloudy-day": "\U0001F324",
@@ -308,6 +227,7 @@ def onecall(self, e, location="", hourly=False, daily=False):
                 wind_arrow = bearing_to_arrow(wind_direction)
                 wind_direction = bearing_to_compass(wind_direction)
                 reading_time_hour = reading_time.hour
+                summary_icon = weather_summary_to_icon(hour['weather'][0]['icon'])
                 if reading_time_hour > 21:
                     break
                 if reading_time_hour > 12:
@@ -336,9 +256,9 @@ def onecall(self, e, location="", hourly=False, daily=False):
                     pass
                 
                 if country != "US":
-                    world_weather += f" {forecast_hour} {fahrenheit_to_celsius(hour['temp'])}°C(Feels:{fahrenheit_to_celsius(hour['feels_like'])}°C) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh {hour['weather'][0]['description']} /"
+                    world_weather += f" {forecast_hour} {fahrenheit_to_celsius(hour['temp'])}°C(Feels:{fahrenheit_to_celsius(hour['feels_like'])}°C) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh {hour['weather'][0]['description']}{summary_icon} /"
                 else:
-                    us_weather += f" {forecast_hour} {int(hour['temp'])}°F(Feels:{int(hour['feels_like'])}°F) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph {hour['weather'][0]['description']} /"
+                    us_weather += f" {forecast_hour} {int(hour['temp'])}°F(Feels:{int(hour['feels_like'])}°F) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph {hour['weather'][0]['description']}{summary_icon} /"
 
         if country != "US":
             world_weather = world_weather[0:-1]
