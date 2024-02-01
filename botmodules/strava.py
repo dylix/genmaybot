@@ -91,7 +91,7 @@ def strava_insert_token(user, token, refresh):
     conn = sqlite3.connect('strava.sqlite')
     c = conn.cursor()
     query = "INSERT INTO tokens VALUES (:user, :token, :refresh)"
-    c.execute(query, {'user': user, 'token': token, 'refresh': refresh})
+    c.execute(query, {'user': user.lower(), 'token': token, 'refresh': refresh})
     #c.execute(f"INSERT INTO tokens VALUES (?, ?);", user, token)
     conn.commit()
     c.close()
@@ -139,7 +139,7 @@ def request_json(url):
     #if not request_json.token:  # if we haven't found a valid client token, fall back to the public one
     #    request_json.token = self.botconfig["APIkeys"]["stravaToken"]
     headers = {'Authorization': 'access_token ' + request_json.token}
-    # print ("Strava: requesting %s Headers: %s" % (url, headers))
+    #print ("Strava: requesting %s Headers: %s" % (url, headers))
     response = ''
     req = ''
     try:
@@ -796,7 +796,6 @@ def strava_extract_latest_ride(self, response, e, athlete_id=None):
     """ Grab the latest ride from a list of rides and gather some statistics about it """
     if response:
         recent_ride = response[0]
-        #recent_ride = strava_get_ride_extended_info(self, recent_ride['id'])
         if recent_ride:
             return strava_ride_to_string(recent_ride, athlete_id)
         else:
@@ -808,13 +807,13 @@ def strava_extract_ytd_stats(self, response, e, athlete_id=None):
     """ Grab the users statistics"""
     if response:
         ytd_ride_totals = response['ytd_ride_totals']
-        #recent_ride = strava_get_ride_extended_info(self, recent_ride['id'])
         if ytd_ride_totals:
-            #return strava_ride_to_string(recent_ride, athlete_id)
             if athlete_id:
-                #measurement_pref = strava_get_measurement_pref(athlete_id)
                 athlete_info = strava_get_athlete_info(athlete_id)
-                measurement_pref = athlete_info['measurement_preference']
+                try:
+                    measurement_pref = athlete_info['measurement_preference']
+                except:
+                    measurement_pref = None
             else:
                 measurement_pref = None
                 athlete_info = None
@@ -826,7 +825,7 @@ def strava_extract_ytd_stats(self, response, e, athlete_id=None):
             it = datetime.timedelta(seconds=float(ytd_ride_totals['elapsed_time'] - ytd_ride_totals['moving_time']))
             idleTime = "{:02}h:{:02}m".format((it.days*24)+it.seconds//3600, str((it.seconds//60)%60))
             
-            if measurement_pref == "feet" or athlete_id == None or measurement_pref == None:
+            if measurement_pref == "feet":
                 return f"Activities: {ytd_ride_totals['count']} | Distance: {math.trunc(strava_convert_meters_to_miles(ytd_ride_totals['distance']))} mi | Elevation: {math.trunc(strava_convert_meters_to_feet(ytd_ride_totals['elevation_gain']))} ft | Moving Time: {movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing: {idleTime}"
             else:
                 return f"Activities: {ytd_ride_totals['count']} | Distance: {ytd_ride_totals['distance'] / 1000} km | Elevation: {ytd_ride_totals['elevation_gain']} meters | Moving Time: {movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing: {idleTime}"
@@ -909,14 +908,16 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
     else:  # Heart not found
         avg_hr = False
     if athlete_id:
-        #measurement_pref = strava_get_measurement_pref(athlete_id)
+        #try catch.. lgee somehow has authed, but doesn't respond with measurement_preference key?! wtaf?
         athlete_info = strava_get_athlete_info(athlete_id)
-        measurement_pref = athlete_info['measurement_preference']
+        try:
+            measurement_pref = athlete_info['measurement_preference']
+        except:
+            measurement_pref = None
     else:
         measurement_pref = None
         athlete_info = None
-
-    if measurement_pref == "feet" or athlete_id == None or measurement_pref == None:
+    if measurement_pref == "feet":
         mph = strava_convert_meters_per_second_to_miles_per_hour(recent_ride['average_speed'])
         miles = strava_convert_meters_to_miles(recent_ride['distance'])
         max_mph = strava_convert_meters_per_second_to_miles_per_hour(recent_ride['max_speed'])
@@ -931,7 +932,7 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
         # ADD HR
         if avg_hr > 0:
             return_string += " | Avg. HR: %s" % (int(avg_hr))
-    elif measurement_pref == "meters":
+    else:
         kmh = round(float(recent_ride['average_speed']) * 3.6, 1)  # meters per second to km/h
         km = round(float(recent_ride['distance'] / 1000), 1)  # meters to km
         max_kmh = round(float(recent_ride['max_speed']) * 3.6, 1)  # m/s to km/h
@@ -973,7 +974,8 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
 def strava_get_athlete_info(athlete_id):
     #print('getting athlete info')
     try:
-        athlete_info = request_json("https://www.strava.com/api/v3/athletes/%s" % athlete_id)
+        #athlete_info = request_json("https://www.strava.com/api/v3/athletes/%s" % athlete_id)
+        athlete_info = request_json("https://www.strava.com/api/v3/athlete")
         if athlete_info:
             return athlete_info
     except:
