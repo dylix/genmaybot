@@ -729,6 +729,90 @@ def strava_outside(self, e):
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
+def strava_weekly(self, e):
+    strava_id = strava_get_athlete(e.nick)
+    # set the token for the current user
+    #token, refresh = strava_get_token(e.nick)
+    if not e.input:
+        e.input = ''
+    #return e
+    #length of time to search
+    
+    try:
+        d = datetime.datetime.today().weekday()
+        last_monday = datetime.datetime.today() + datetime.timedelta(weeks=-1, days=(7-d)%7)
+        last_monday = datetime.datetime.combine(last_monday, datetime.datetime.min.time())
+        last_monday_timestamp = last_monday.timestamp()
+    except Exception as err:
+        e.output = str(err)
+        return e
+
+    
+    if e.input:
+        athlete_id = strava_get_athlete(e.input)
+        if athlete_id:
+            try:
+                username = e.input
+                # set the token for the provided user, if we have it
+                token, refresh = strava_get_token(e.input)
+                valid_token = check_strava_token(self, e.input, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.input)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                if strava_is_valid_user(athlete_id):
+                    # Process a last ride request for a specific strava id.
+                    stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{athlete_id}/activities?per_page=200&after={last_monday_timestamp}')
+                    #stats_response = request_json("https://dylix.org/test.json")
+                    stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                    e.output = strava_extract_weekly(self, stats_response, e, athlete_id, username)
+                else:
+                    e.output = "Sorry, that is not a valid Strava user."
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        else:
+            # We still have some sort of string, but it isn't numberic.
+            e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
+    elif strava_id:
+        try:
+            if strava_is_valid_user(strava_id):
+                # Process the last ride for the current strava id.
+                
+                # set the token for the provided user, if we have it
+                if (e.input == ''):
+                    username = e.nick
+                else:
+                    username = e.input
+                token, refresh = strava_get_token(username)
+                valid_token = check_strava_token(self, username, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(username)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{strava_id}/activities?per_page=200&after={last_monday_timestamp}')
+                #stats_response = request_json("https://dylix.org/test.json")
+                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                e.output = strava_extract_weekly(self, stats_response, e, strava_id, username)
+            else:
+                e.output = "Sorry, that is not a valid Strava user."
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (strava_id)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+    else:
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
+    return e
+
 # ==== begin beardedwizard
 def strava_parent(self, e):
     strava_command_handler(self, e)
@@ -746,7 +830,7 @@ def strava_command_handler(self, e):
     function = None
 
     arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'compare': strava_compare, 'ftp': strava_ftp, 'get': strava, 'set': strava_set_athlete,
-                         'reset': strava_reset_athlete, 'inside': strava_inside, 'outside': strava_outside, 'ytd': strava_ytd, 'help': strava_help}
+                         'reset': strava_reset_athlete, 'inside': strava_inside, 'outside': strava_outside, 'weekly': strava_weekly, 'ytd': strava_ytd, 'help': strava_help}
     arg_list = list(arg_function_dict.keys())
 
     # EX: "set 123456"
@@ -896,6 +980,50 @@ def strava_extract_outside(self, response, e, athlete_id=None, username=None):
         return f"{username} hasn't ridden outside in the last 21 days. Time to harden the fuck up."
     else:
         return "Sorry %s, no stats were available yet. You may need to run '!strava auth' Remember, if it's not on Strava, it didn't happen." % (e.nick)
+
+def strava_extract_weekly(self, response, e, athlete_id=None, username=None):
+    weekly_elapsed_time = 0
+    weekly_moving_time = 0
+    weekly_elevation = 0
+    weekly_distance = 0
+    weekly_activities = 0
+    weekly_avg_speed = 0
+    if response:
+        if athlete_id:
+            athlete_info = strava_get_athlete_info(athlete_id)
+            try:
+                measurement_pref = athlete_info['measurement_preference']
+            except:
+                measurement_pref = None
+        else:
+            measurement_pref = None
+            athlete_info = None
+        for activity in response:
+            if activity['type'] == 'Ride' or activity['type'] == 'EBikeRide' or activity['type'] == 'VirtualRide':
+                weekly_distance += activity['distance']
+                weekly_elevation += activity['total_elevation_gain']
+                weekly_elapsed_time += activity['elapsed_time']
+                weekly_moving_time += activity['moving_time']
+                weekly_activities += 1
+                weekly_avg_speed += activity['average_speed']
+
+
+                #return f"{username} last rode outside {outside_time}\n{strava_ride_to_string(activity, athlete_id)}"
+        et = datetime.timedelta(seconds=float(weekly_elapsed_time))
+        elapsedTime = "{:02}h:{:02}m".format((et.days*24)+et.seconds//3600, (et.seconds//60)%60)
+        mt = datetime.timedelta(seconds=float(weekly_moving_time))
+        movingTime = "{:02}h:{:02}m".format((mt.days*24)+mt.seconds//3600, (mt.seconds//60)%60)
+        it = datetime.timedelta(seconds=float(weekly_elapsed_time - weekly_moving_time))
+        idleTime = "{:02}h:{:02}m".format((it.days*24)+it.seconds//3600, str((it.seconds//60)%60))
+        
+        weekly_avg_speed = weekly_avg_speed / weekly_activities
+        
+        if measurement_pref == "feet":
+            return f"{username}'s weekly stats | Distance: {math.trunc(strava_convert_meters_to_miles(weekly_distance))} miles | Elevation: {math.trunc(strava_convert_meters_to_feet(weekly_elevation))} feet | Avg Speed: {round(strava_convert_meters_per_second_to_miles_per_hour(weekly_avg_speed), 1)} mph | Moving Time: {movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing Time: {idleTime}"
+        else:
+            return f"{username}'s weekly stats | Distance: {round(weekly_distance / 1000, 1)} kilometers | Elevation: {math.trunc(round(weekly_elevation, 0))} meters | Avg Speed: {round(float(weekly_avg_speed) * 3.6, 1)} kph | Moving Time:{movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing Time: {idleTime}"
+    else:
+        return f"{username} hasn't ridden since the begining of the week. Time to harden the fuck up."
 
 def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is missing we can default to mph
     # Convert a lot of stuff we need to display the message
