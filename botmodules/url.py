@@ -38,7 +38,7 @@ def url_posted(self, e, titlecall=False):
     result = cursor.fetchone()
     if result and result[0] != 0:
         url = result[2]
-        repost = "LOL REPOST %s " % (result[0] + 1)
+        repost = "LOL REPOST #%s -> " % (result[0] + 1)
         orig = datetime.datetime.strptime(result[1], "%Y-%m-%d %H:%M:%S")
         now = datetime.datetime.utcnow()
         delta = now - orig
@@ -112,6 +112,8 @@ def url_posted(self, e, titlecall=False):
 
     if not titlecall:
         url = ""
+        if repost != '':
+            e.output = "%s%s%s" % (repost, title, days)
     else:
         url = " ( {} )".format(url)
         e.output = "%s%s%s%s" % (repost, title, days, url)

@@ -837,7 +837,11 @@ def strava_gear_timer(self, e):
                     username = e.nick
                 else:
                     username = e.input
-                gear_date, gear_name = strava_get_gear_timer(username)
+                try:
+                    gear_date, gear_name = strava_get_gear_timer(username)
+                except:
+                    e.output = "Sorry, %s, you don't have any timers on your gear set. You may need to !strava settimer" % (username, e.input)
+                    return e
                 token, refresh = strava_get_token(username)
                 valid_token = check_strava_token(self, username, token, refresh)
                 if valid_token == True:
