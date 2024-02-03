@@ -6,7 +6,7 @@ def google_search(bot, e):
     if e.input == '':
         e.output = "While we are all searching for the meaning of life in a general sense, you must be specific with this."
         return e
-    query = urllib.parse.quote(e.input)
+    query = e.input
     google_results = search(query, num_results=2, advanced=True)
     #print ("list", list(google_results))
     #print(google_results.SearchResult.title)
