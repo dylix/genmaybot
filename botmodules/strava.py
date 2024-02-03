@@ -206,7 +206,8 @@ def strava_check_create_tables():
     tables = {
         'version': "CREATE TABLE version (version_field TEXT, version_number INTEGER)",
         'tokens': "CREATE TABLE tokens (user TEXT UNIQUE ON CONFLICT REPLACE, token TEXT, refresh TEXT)",
-        'athletes': "CREATE TABLE athletes (user TEXT UNIQUE ON CONFLICT REPLACE, strava_id TEXT)"
+        'athletes': "CREATE TABLE athletes (user TEXT UNIQUE ON CONFLICT REPLACE, strava_id TEXT)",
+        'gear': "CREATE TABLE gear (user TEXT UNIQUE ON CONFLICT REPLACE, date INTEGER, gear TEXT)"
     }
     # Go through each table and check if it exists, if it doesn't, run the SQL statement to create it.
     for  table_name, sql_statement in tables.items():
@@ -223,6 +224,15 @@ def strava_insert_athlete(nick, athlete_id):
     c = conn.cursor()
     query = "INSERT INTO athletes VALUES (:user, :strava_id)"
     c.execute(query, {'user': nick, 'strava_id': athlete_id})
+    conn.commit()
+    c.close()
+
+def strava_insert_gear(nick, gear_date, gear_name):
+    """ Insert a user's gear and date into the gear table """
+    conn = sqlite3.connect('strava.sqlite')
+    c = conn.cursor()
+    query = "INSERT INTO gear VALUES (:user, :date, :gear)"
+    c.execute(query, {'user': nick, 'date': gear_date, 'gear': gear_name})
     conn.commit()
     c.close()
 
@@ -245,6 +255,19 @@ def strava_get_athlete(nick):
     if result:
         c.close()
         return result[0]
+    else:
+        c.close()
+        return False
+
+def strava_get_gear_timer(nick):
+    """ Get gear date by user """
+    conn = sqlite3.connect('strava.sqlite')
+    c = conn.cursor()
+    query = "SELECT date, gear FROM gear WHERE UPPER(user) = UPPER(?)"
+    result = c.execute(query, [nick]).fetchone()
+    if result:
+        c.close()
+        return result[0], result[1]
     else:
         c.close()
         return False
@@ -285,13 +308,46 @@ def strava_set_athlete(self, e):
         # Bark at stupid users.
         self.irccontext.privmsg(e.nick, "Usage: !strava set <strava id>")
 
+def substring_after(s, delim):
+    return s.partition(delim)[2]
+
+def strava_set_gear_timer(self,e):
+    if e.input:
+        split_input = e.input.split(' ')
+        gear_date = math.trunc(datetime.datetime.strptime(split_input[0], '%m/%d/%Y').timestamp())#.strftime('%m/%d/%Y')
+        gear_name = substring_after(e.input, split_input[0])[1:]
+
+        token, refresh = strava_get_token(e.nick)
+        valid_token = check_strava_token(self, e.nick, token, refresh)
+        if valid_token == True:
+            request_json.token = token
+            request_json.refresh = refresh
+        elif valid_token == "refreshed":
+            token, refresh = strava_get_token(e.nick)
+            request_json.token = token
+            request_json.refresh = refresh
+        athlete_id = strava_get_athlete(e.nick)
+        bikeId = ''
+        if athlete_id:
+            athlete_info = strava_get_athlete_info(athlete_id)
+            for bike in athlete_info['bikes']:
+                if bike['name'] == gear_name:
+                    bikeId = bike['id']
+                    break
+        if not bikeId:
+            self.irccontext.privmsg(e.nick, "No gear match was found. What games are you playing here?")
+            return
+        strava_insert_gear(e.nick, gear_date, gear_name)
+        self.irccontext.privmsg(e.nick, "Your Strava gear timer has been set to %s. Now go play bikes." % (e.input))
+    else:
+        self.irccontext.privmsg(e.nick, "Please use the correct format. <date> <bike name> EXAMPLE: 12/30/2024 The Big Beast NOTE: The name much match EXACTLY")
+
 def strava_reset_athlete(self, e):
     """ Resets an athlete's Strava ID. """
     athlete_id = strava_get_athlete(e.nick)
     if athlete_id:
         strava_delete_athlete(e.nick, athlete_id)
-        self.irccontext.privmsg(e.nick,
-                                "Your Strava ID has been reset, but remember, if it's not on Strava, it didn't happen.")
+        self.irccontext.privmsg(e.nick, "Your Strava ID has been reset, but remember, if it's not on Strava, it didn't happen.")
     else:
         self.irccontext.privmsg(e.nick, "You don't even have a Strava ID set, why would you want to reset it?")
 
@@ -729,6 +785,83 @@ def strava_outside(self, e):
         e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
+def strava_gear_timer(self, e):
+    strava_id = strava_get_athlete(e.nick)
+    # set the token for the current user
+    if not e.input:
+        e.input = ''
+
+    if e.input:
+        athlete_id = strava_get_athlete(e.input)
+        try:
+            gear_date, gear_name = strava_get_gear_timer(e.input)
+        except:
+            e.output = "Sorry, %s, %s does not have any timers on gear set. User may need to !strava settimer" % (e.nick, e.input)
+            return e
+        if athlete_id:
+            try:
+                username = e.input
+                # set the token for the provided user, if we have it
+                token, refresh = strava_get_token(e.input)
+                valid_token = check_strava_token(self, e.input, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.input)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                if strava_is_valid_user(athlete_id):
+                    # Process a last ride request for a specific strava id.
+                    stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{athlete_id}/activities?per_page=200&after={gear_date}')
+                    #stats_response = request_json("https://dylix.org/test.json")
+                    stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                    e.output = strava_extract_gear_timer(self, stats_response, e, athlete_id, username, gear_date, gear_name)
+                else:
+                    e.output = "Sorry, that is not a valid Strava user."
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        else:
+            # We still have some sort of string, but it isn't numberic.
+            e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
+    elif strava_id:
+        try:
+            if strava_is_valid_user(strava_id):
+                # Process the last ride for the current strava id.
+                
+                # set the token for the provided user, if we have it
+                if (e.input == ''):
+                    username = e.nick
+                else:
+                    username = e.input
+                gear_date, gear_name = strava_get_gear_timer(username)
+                token, refresh = strava_get_token(username)
+                valid_token = check_strava_token(self, username, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(username)
+                    request_json.token = token
+                    request_json.refresh = refresh
+                stats_response = request_json(f'https://www.strava.com/api/v3/athletes/{strava_id}/activities?per_page=200&after={gear_date}')
+                #stats_response = request_json("https://dylix.org/test.json")
+                stats_response = sorted(stats_response, key=lambda k: k['start_date'], reverse=True)
+                e.output = strava_extract_gear_timer(self, stats_response, e, strava_id, username, gear_date, gear_name)
+            else:
+                e.output = "Sorry, that is not a valid Strava user."
+        except urllib.error.URLError as err:
+            if err.code == 429:
+                e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (strava_id)
+            else:
+                e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
+    else:
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth if you have Strava privacy enabled. Remember, if it's not on Strava, it didn't happen." % (e.nick)
+    return e
+
 def strava_weekly(self, e):
     strava_id = strava_get_athlete(e.nick)
     # set the token for the current user
@@ -829,8 +962,9 @@ def strava_command_handler(self, e):
     val_offset = 1
     function = None
 
-    arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'compare': strava_compare, 'ftp': strava_ftp, 'get': strava, 'set': strava_set_athlete,
-                         'reset': strava_reset_athlete, 'inside': strava_inside, 'outside': strava_outside, 'weekly': strava_weekly, 'ytd': strava_ytd, 'help': strava_help}
+    arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'compare': strava_compare, 'ftp': strava_ftp, 'get': strava, 'set': strava_set_athlete, 
+                         'settimer': strava_set_gear_timer, 'timer': strava_gear_timer, 'reset': strava_reset_athlete, 'inside': strava_inside, 'outside': strava_outside, 
+                         'weekly': strava_weekly, 'ytd': strava_ytd, 'help': strava_help}
     arg_list = list(arg_function_dict.keys())
 
     # EX: "set 123456"
@@ -980,6 +1114,39 @@ def strava_extract_outside(self, response, e, athlete_id=None, username=None):
         return f"{username} hasn't ridden outside in the last 21 days. Time to harden the fuck up."
     else:
         return "Sorry %s, no stats were available yet. You may need to run '!strava auth' Remember, if it's not on Strava, it didn't happen." % (e.nick)
+
+def strava_extract_gear_timer(self, response, e, athlete_id=None, username=None, gear_date=None, gear_name=None):
+    if response:
+        bikeId = ''
+        num_ride = 0
+        elapsed_time = 0
+        moving_time = 0
+        try:
+            gear_date = datetime.datetime.fromtimestamp(gear_date).strftime("%m/%d/%Y")
+            athlete_info = strava_get_athlete_info(athlete_id)
+            for bike in athlete_info['bikes']:
+                if bike['name'] == gear_name:
+                    bikeId = bike['id']
+                    break
+            for activity in response:
+                if activity['gear_id'] == bikeId:
+                    num_ride += 1
+                    elapsed_time += activity['elapsed_time']
+                    moving_time += activity['moving_time']
+        except Exception as err:
+            return str(err)
+        
+        et = datetime.timedelta(seconds=float(elapsed_time))
+        elapsedTime = "{:02}h:{:02}m".format((et.days*24)+et.seconds//3600, (et.seconds//60)%60)
+        mt = datetime.timedelta(seconds=float(moving_time))
+        movingTime = "{:02}h:{:02}m".format((mt.days*24)+mt.seconds//3600, (mt.seconds//60)%60)
+        it = datetime.timedelta(seconds=float(elapsed_time - moving_time))
+        idleTime = "{:02}h:{:02}m".format((it.days*24)+it.seconds//3600, str((it.seconds//60)%60))
+        
+        return f"{username}'s bike \"{gear_name}\" since {gear_date} has {num_ride} rides, with a moving time of {movingTime} and a total time of {elapsedTime}"
+
+    else:
+        return f"{username} hasn't logged anytime on this gear. Time to harden the fuck up."
 
 def strava_extract_weekly(self, response, e, athlete_id=None, username=None):
     weekly_elapsed_time = 0
