@@ -116,7 +116,7 @@ def get_weather(self, e):
     onecall(self, e, location)
     
     if not e.output:
-        get_wwo(self, location, e)
+        get_weather_gov(self, e, location)
     if not e.output:
         return get_weather2(self, e)
         
@@ -188,7 +188,7 @@ def onecall(self, e, location="", hourly=False, daily=False):
         e.output = "No location was found"
         return e
     exclude = ''
-    #url = "https://dylix.org/test.json"
+    #url = "https://dylix.org/weather.json"
     url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&appid={}&units=imperial"
     url = url.format(lat, lng, apikey)
     #print(url)
@@ -207,6 +207,7 @@ def onecall(self, e, location="", hourly=False, daily=False):
     #results_json = data
     timezone_offset = results_json['timezone_offset']
     current_conditions = results_json['current']
+    current_time = current_conditions['dt']
     hourly_conditions = results_json['hourly']
     daily_conditions = results_json['daily']
     
@@ -371,17 +372,13 @@ def onecall(self, e, location="", hourly=False, daily=False):
         sunrise = sunrise.strftime('%-I:%M%p')
         sunset = sunset.strftime('%-I:%M%p')
         
-        # If the minute by minute outlook isn't available, grab the hourly
-        try:
-            if results_json['minutely'][0]['summary'].title() != results_json['daily'][0]['weather'][0]['description'].title():
-                outlook = "%s -> %s " % (results_json['minutely'][0]['summary'].title(), results_json['daily'][0]['weather'][0]['description'].title())
-            else:
-                outlook = results_json['minutely'][0]['summary'].title()
-        except:
-            if results_json['hourly'][12]['weather'][0]['description'].title() != results_json['daily'][0]['weather'][0]['description'].title():
-                outlook = "%s -> %s" % (results_json['hourly'][12]['weather'][0]['description'].title(), results_json['daily'][0]['weather'][0]['description'].title())
-            else:
-                outlook = results_json['hourly'][12]['weather'][0]['description'].title()
+        outlook_now_hour = datetime.datetime.fromtimestamp(current_time).hour
+        #outlook_later_hour = datetime.datetime.fromtimestamp(current_time) + datetime.timedelta(hours=4)
+
+        if results_json['hourly'][outlook_now_hour]['weather'][0]['description'] != results_json['daily'][0]['weather'][0]['description']:
+            outlook = "%s %s -> %s %s" % (results_json['hourly'][outlook_now_hour]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['hourly'][outlook_now_hour]['weather'][0]['icon']), results_json['daily'][0]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['daily'][0]['weather'][0]['icon']))
+        else:
+            outlook = "%s %s" % (results_json['hourly'][outlook_now_hour]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['hourly'][outlook_now_hour]['weather'][0]['icon']))
 
         alert_urls = []
         if alerts:
@@ -580,3 +577,52 @@ def get_sun(self, e):
     return e
 get_sun.command = "!sun"
 get_sun.helptext = "Usage: \002!sun <location>\002Example: !sun 59711 Show information about sunrise and sunset Use \002!setlocation <location>\002 to save your location"
+
+def get_weather_gov(self, e, location=None):
+    self.logger.debug("Entered weather.gov function. Location {} or {}".format(location, e.input))
+    e.output = "Not finished.. maybe forever"
+    return e
+    try:
+        if not location:
+            location = e.location
+    except:
+        location = e.input
+    
+    if location and user.get_location(location):
+        location = user.get_location(location) #allow looking up by nickname
+    
+    if location == "" and user:
+        location = user.get_location(e.nick)
+    if location == "":
+        location = e.input
+    if location == "" and user:
+        location = user.get_location(e.nick)
+    try:
+        address, lat, lng, country = self.tools['findLatLong'](location)
+    except:
+        e.output = "No location was found"
+        return e
+    exclude = ''
+    #url = "https://dylix.org/test.json"
+    url = "https://api.weather.gov/points/{},{}"
+    url = url.format(lat, lng)
+    print(url)
+    try:
+        request = urllib.request.Request(url, None, {'Referer': 'https://dylix.org/'})
+        response = urllib.request.urlopen(request)
+        #print("skipping download")
+        #with open("test.json", "r") as read_file:
+        #    data = json.load(read_file)
+        # UNCOMMENT RESULTS_JSON TOO
+    except urllib.error.HTTPError as err:
+        self.logger.exception("Exception in onecall:")
+    
+    #try:
+    results_json = json.loads(response.read().decode('utf-8'))
+    forecast = results_json['properties']['forecast']
+    forecastHourly = results_json['properties']['forecastHourly']
+    forecastGridData = results_json['properties']['forecastGridData']
+    observationStations = results_json['properties']['observationStations']
+    
+get_weather_gov.command = "!wgov"
+get_weather_gov.helptext = "Usage: \002!wgov <location>\002Example: !wgov anaconda Show information about the weather Use \002!setlocation <location>\002 to save your location"
