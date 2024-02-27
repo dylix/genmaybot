@@ -502,7 +502,7 @@ def strava_compare(self, e):
     if not e.input:
         e.input = ''
     participants = e.input.split(' ')
-    if len(participants) > 1 or (participants[0] != e.nick and participants[0] != ''):
+    if len(participants) > 1 or (participants[0].lower() != e.nick.lower() and participants[0] != ''):
         participant_stats_list = []
         if len(participants) == 1:
             participants.append(e.nick)
@@ -559,7 +559,7 @@ def strava_compare(self, e):
         
         return e
         
-    elif participants[0] == '' or participants[0] == e.nick:
+    elif participants[0] == '' or participants[0].lower() == e.nick.lower():
         e.output = "Sorry %s, You need something to compare it to. At the very least !compare someothernick" % (e.nick)
         return e
 strava_compare.command = "!compare"
@@ -1064,7 +1064,7 @@ def strava_extract_inside(self, response, e, athlete_id=None, username=None):
     if response:
         for activity in response:
             if activity['type'] == 'VirtualRide':
-                inside_ride_days = datetime.datetime.now() - datetime.datetime.strptime(activity['start_date'],'%Y-%m-%dT%H:%M:%SZ') #2024-01-18T18:28:07Z
+                inside_ride_days = datetime.datetime.utcnow() - datetime.datetime.strptime(activity['start_date'],'%Y-%m-%dT%H:%M:%SZ') #2024-01-18T18:28:07Z
                 days, seconds = inside_ride_days.days, inside_ride_days.seconds
                 
                 total_hours = days * 24 + seconds // 3600
@@ -1095,7 +1095,7 @@ def strava_extract_outside(self, response, e, athlete_id=None, username=None):
     if response:
         for activity in response:
             if activity['type'] == 'Ride' or activity['type'] == 'EBikeRide':
-                outside_ride_days = datetime.datetime.now() - datetime.datetime.strptime(activity['start_date'],'%Y-%m-%dT%H:%M:%SZ') #2024-01-18T18:28:07Z
+                outside_ride_days = datetime.datetime.utcnow() - datetime.datetime.strptime(activity['start_date'],'%Y-%m-%dT%H:%M:%SZ') #2024-01-18T18:28:07Z
                 days, seconds = outside_ride_days.days, outside_ride_days.seconds
                 
                 total_hours = days * 24 + seconds // 3600

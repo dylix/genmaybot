@@ -30,10 +30,10 @@ def url_posted(self, e, titlecall=False):
     cursor = conn.cursor()
     result = cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='links';").fetchone()
     if not result:
-        cursor.execute('''CREATE TABLE 'links' ("url" tinytext, "hash" char(56) NOT NULL UNIQUE, "reposted" smallint(5) default '0', "timestamp" timestamp NOT NULL default CURRENT_TIMESTAMP);''')
+        cursor.execute('''CREATE TABLE 'links' ("url" tinytext, "hash" char(56) NOT NULL UNIQUE, "reposted" smallint(5) default '0', "timestamp" timestamp NOT NULL default CURRENT_TIMESTAMP, "ogp" tinytext);''')
         cursor.execute('''CREATE INDEX "links_hash" ON 'links' ("hash");''')
 
-    query = "SELECT reposted, timestamp, url FROM links WHERE hash='%s'" % urlhash
+    query = "SELECT reposted, timestamp, url, ogp FROM links WHERE hash='%s'" % urlhash
     result = cursor.execute(query)
     result = cursor.fetchone()
     if result and result[0] != 0:
@@ -43,24 +43,25 @@ def url_posted(self, e, titlecall=False):
         now = datetime.datetime.utcnow()
         delta = now - orig
         plural = ""
+        ogp = result[3]
         if delta.days > 0:
             if delta.days > 1:
                 plural = "s"
-            days = " (posted %s day%s ago)" % (str(delta.days), plural)
+            days = " (posted by %s %s day%s ago)" % (ogp, str(delta.days), plural)
         else:
             hrs = int(round(delta.seconds / 3600.0, 0))
             if hrs == 0:
                 mins = round(delta.seconds / 60)
                 if mins > 1:
                     plural = "s"
-                days = " (posted %s minute%s ago)" % (str(mins), plural)
+                days = " (posted by %s %s minute%s ago)" % (ogp, str(mins), plural)
                 if mins == 0:
                     repost = ""
                     days = ""
             else:
                 if hrs > 1:
                     plural = "s"
-                days = " (posted %s hour%s ago)" % (str(hrs), plural)
+                days = " (posted by %s %s hour%s ago)" % (ogp, str(hrs), plural)
     title = ""
     try:
         wiki = self.bangcommands["!wiki"](self, e, True)
@@ -87,8 +88,8 @@ def url_posted(self, e, titlecall=False):
 
     if not titlecall:
         cursor.execute("""UPDATE OR IGNORE links SET reposted=reposted+1 WHERE hash = ?""", [urlhash])
-
-    cursor.execute("""INSERT OR IGNORE INTO links(url, hash) VALUES (?,?)""", (url, urlhash))
+    ogp = e.nick.lower()
+    cursor.execute("""INSERT OR IGNORE INTO links(url, hash, ogp) VALUES (?,?,?)""", (url, urlhash,ogp))
     conn.commit()
 
     if url.find("imgur.com") != -1 and url.find("/a/") == -1:
@@ -177,8 +178,10 @@ def invidious_link(self, e):
         e.input = url
     conn.close()
     regex = r"(?:https:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)"
-    e.input = re.sub(regex, r"https://vid.puffyan.us/watch?v=\1",url)
-    return url_posted(self, e, True)
+    #e.input = re.sub(regex, r"https://iv.ggtyler.dev/watch?v=\1",url)
+    e.output = re.sub(regex, r"https://iv.ggtyler.dev/watch?v=\1",url)
+    return e
+    #return url_posted(self, e, True)
 invidious_link.command = "!invidious"
 invidious_link.helptext = "Usage: !invidious\nLinks to invidious using last youtube url"
 
@@ -192,6 +195,30 @@ def last_link(self, e):
     conn.close()
     e.output = url
     return e
-
 last_link.command = "!lastlink"
 last_link.helptext = "Usage: !lastlink\nShows the last URL that was posted in the channel"
+
+def last_link_user(self, e):
+    #displays the title of the last link posted (requires sql)
+    if e.input == '':
+        e.input = e.nick
+    ogp = e.input.lower()
+    conn = sqlite3.connect("links.sqlite")
+    cursor = conn.cursor()
+    query = "SELECT url FROM links WHERE ogp=? ORDER BY rowid DESC LIMIT 5;"
+    cursor.execute(query, [ogp])
+    result = cursor.fetchall()
+    urls = ''
+    count = 0
+    for linkurl in result:
+        count += 1
+        urls += f"#{count} {linkurl[0]} || "
+    conn.close()
+    urls = urls[:-3]
+    if urls == '':
+            urls = "No posted urls by %s were found." % (ogp)
+    e.output = self.tools['insert_at_closest_space'](urls)
+    #e.output = urls
+    return e
+last_link_user.command = "!links"
+last_link_user.helptext = "Usage: !links\nShows the last URLs that was posted in the channel by the user"

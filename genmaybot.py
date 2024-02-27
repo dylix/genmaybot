@@ -228,11 +228,6 @@ class TestBot(SingleServerIRCBot):
 
         # Init user_location
         ircevent.user_location = ""
-
-        #if "ducky" in hostmask.lower() or "ucky" in from_nick.lower():
-        #    self.doingcommand = False
-        #    return
-        
         notice = False
 
         try:
