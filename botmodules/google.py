@@ -13,9 +13,9 @@ def google_search(bot, e):
     result_num = 0
     #print(len(google_results))
     for result in google_results:
-        e.output += f"#{result_num+1} | {result.description} | {result.url}\n"
+        e.output += f"#{result_num+1} | {result.description} | {result.url} || "
         result_num += 1
-
+    e.output = e.output[:-3]
     return e
     
 google_search.command = "!g"

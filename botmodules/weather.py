@@ -257,9 +257,9 @@ def onecall(self, e, location="", hourly=False, daily=False):
                     pass
                 
                 if country != "US":
-                    world_weather += f" {forecast_hour} {fahrenheit_to_celsius(hour['temp'])}°C(Feels:{fahrenheit_to_celsius(hour['feels_like'])}°C) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh {hour['weather'][0]['description']}{summary_icon} /"
+                    world_weather += f" {forecast_hour} {fahrenheit_to_celsius(hour['temp'])}°C ({int(hour['temp'])}°F) (Feels:{fahrenheit_to_celsius(hour['feels_like'])}°C ({int(hour['feels_like'])}°F)) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh({wind_speed}mph) {hour['weather'][0]['description']}{summary_icon} /"
                 else:
-                    us_weather += f" {forecast_hour} {int(hour['temp'])}°F(Feels:{int(hour['feels_like'])}°F) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph {hour['weather'][0]['description']}{summary_icon} /"
+                    us_weather += f" {forecast_hour} {int(hour['temp'])}°F ({fahrenheit_to_celsius(hour['temp'])}°C) (Feels:{int(hour['feels_like'])}°F ({fahrenheit_to_celsius(hour['feels_like'])}°C)) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph({wind_speed_kmh}kmh) {hour['weather'][0]['description']}{summary_icon} /"
 
         if country != "US":
             world_weather = world_weather[0:-1]
@@ -355,9 +355,9 @@ def onecall(self, e, location="", hourly=False, daily=False):
             
         if feels_like != temp:
             if country != "US":
-                feels_like = " / Feels like: %s°C" % (int(round((feels_like- 32)*5/9,0)))
+                feels_like = " / Feels like: %s°C(%s°F)" % (int(round((feels_like- 32)*5/9,0)), int(round(feels_like,0)))
             else:
-                feels_like = " / Feels like: %s°F" % (int(round(feels_like,0)))
+                feels_like = " / Feels like: %s°F(%s°C)" % (int(round(feels_like,0)), int(round((feels_like- 32)*5/9,0)))
         else:
             feels_like = ""
             
@@ -395,17 +395,17 @@ def onecall(self, e, location="", hourly=False, daily=False):
 
         if country == "US": #If we're in the US, use Fahrenheit, otherwise Celsius    
             if (len(alert_urls) > 0):
-                output = "{} / {} {} / {}°F{} / Humidity: {}% / Wind: {} {} at {} mph / Cloud Cover: {}% / High: {}°F Low: {}°F /{} Sunrise: {} Sunset: {} / Outlook: {}\n\nWeather Alert -> {}"
-                e.output = output.format(address, current_summary, summary_icon, temp,
+                output = "{} / {} {} / {}°F({}°C){} / Humidity: {}% / Wind: {} {} at {}mph({}km/h) / Cloud Cover: {}% / High: {}°F({}°C) Low: {}°F({}°C) /{} Sunrise: {} Sunset: {} / Outlook: {}\n\nWeather Alert -> {}"
+                e.output = output.format(address, current_summary, summary_icon, temp, temp_c,
                                   feels_like, humidity, wind_arrow,
-                                  wind_direction, wind_speed,
-                                  cloud_cover, max_temp, min_temp, hour_precip_amount_combined, sunrise, sunset, outlook, *alert_urls)
+                                  wind_direction, wind_speed, wind_speed_kmh,
+                                  cloud_cover, max_temp, max_temp_c, min_temp, min_temp_c, hour_precip_amount_combined, sunrise, sunset, outlook, *alert_urls)
             else:
-                output = "{} / {} {} / {}°F{} / Humidity: {}% / Wind: {} {} at {} mph / Cloud Cover: {}% / High: {}°F Low: {}°F /{} Sunrise: {} Sunset: {} / Outlook: {}"
-                e.output = output.format(address, current_summary, summary_icon, temp,
+                output = "{} / {} {} / {}°F({}°C) {} / Humidity: {}% / Wind: {} {} at {}mph({}km/h) / Cloud Cover: {}% / High: {}°F({}°C) Low: {}°F({}°C) /{} Sunrise: {} Sunset: {} / Outlook: {}"
+                e.output = output.format(address, current_summary, summary_icon, temp, temp_c,
                                   feels_like, humidity, wind_arrow,
-                                  wind_direction, wind_speed,
-                                  cloud_cover, max_temp, min_temp, hour_precip_amount_combined, sunrise, sunset, outlook)
+                                  wind_direction, wind_speed, wind_speed_kmh,
+                                  cloud_cover, max_temp, max_temp_c, min_temp, min_temp_c, hour_precip_amount_combined, sunrise, sunset, outlook)
         else: #Outside of the US
             outlookt = re.search("(-?\d+)°F", outlook)
             if outlookt:
@@ -417,17 +417,17 @@ def onecall(self, e, location="", hourly=False, daily=False):
                     pass
 
             if (len(alert_urls) > 0):
-                output = "{} / {} {} / {}°C{} / Humidity: {}% / Wind: {} {} at {} km/h / Cloud Cover: {}% / High: {}°C Low: {}°C /{} Sunrise: {} Sunset: {} / Outlook: {}\n\nWeather Alert -> {}"
-                e.output = output.format(address, current_summary, summary_icon, temp_c,
+                output = "{} / {} {} / {}°C({}°F){} / Humidity: {}% / Wind: {} {} at {}km/h({}mph) / Cloud Cover: {}% / High: {}°C({}°F) Low: {}°C({}°F) /{} Sunrise: {} Sunset: {} / Outlook: {}\n\nWeather Alert -> {}"
+                e.output = output.format(address, current_summary, summary_icon, temp_c, temp,
                                   feels_like, humidity, wind_arrow, wind_direction,
-                                  wind_speed_kmh, cloud_cover, max_temp_c,
-                                  min_temp_c, hour_precip_amount_combined, sunrise, sunset, outlook, *alert_urls)
+                                  wind_speed_kmh, wind_speed, cloud_cover, max_temp_c, max_temp,
+                                  min_temp_c, min_temp, hour_precip_amount_combined, sunrise, sunset, outlook, *alert_urls)
             else:
-                output = "{} / {} {} / {}°C{} / Humidity: {}% / Wind: {} {} at {} km/h / Cloud Cover: {}% / High: {}°C Low: {}°C /{} Sunrise: {} Sunset: {} / Outlook: {}"
-                e.output = output.format(address, current_summary, summary_icon, temp_c,
+                output = "{} / {} {} / {}°C({}°F){} / Humidity: {}% / Wind: {} {} at {}km/h({}mph) / Cloud Cover: {}% / High: {}°C({}°F) Low: {}°C({}°F) /{} Sunrise: {} Sunset: {} / Outlook: {}"
+                e.output = output.format(address, current_summary, summary_icon, temp_c, temp,
                                   feels_like, humidity, wind_arrow, wind_direction,
-                                  wind_speed_kmh, cloud_cover, max_temp_c,
-                                  min_temp_c, hour_precip_amount_combined, sunrise, sunset, outlook)
+                                  wind_speed_kmh, wind_speed, cloud_cover, max_temp_c, max_temp,
+                                  min_temp_c, min_temp, hour_precip_amount_combined, sunrise, sunset, outlook)
         return e
 
 def pasteglotio(self, title, content):
