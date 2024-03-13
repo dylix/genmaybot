@@ -384,6 +384,26 @@ def strava(self, e):
                     e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
                 else:
                     e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+        elif e.input.isdigit():
+            try:
+                # set the token for the provided user, if we have it
+                token, refresh = strava_get_token(e.nick)
+                valid_token = check_strava_token(self, e.nick, token, refresh)
+                if valid_token == True:
+                    request_json.token = token
+                    request_json.refresh = refresh
+                elif valid_token == "refreshed":
+                    token, refresh = strava_get_token(e.nick)
+                    request_json.token = token
+                    request_json.refresh = refresh
+
+                rides_response = request_json("https://www.strava.com/api/v3/activities/%s" % e.input)
+                e.output = strava_extract_latest_ride(self, rides_response, e, e.nick, True)
+            except urllib.error.URLError as err:
+                if err.code == 429:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                else:
+                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
         else:
             # We still have some sort of string, but it isn't numberic.
             e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
@@ -1018,10 +1038,13 @@ def clean_arg_from_input(string):
     return
 # ==== end beardedwizard
 
-def strava_extract_latest_ride(self, response, e, athlete_id=None):
+def strava_extract_latest_ride(self, response, e, athlete_id=None, single=False):
     """ Grab the latest ride from a list of rides and gather some statistics about it """
     if response:
-        recent_ride = response[0]
+        if single:
+            recent_ride = response
+        else:
+            recent_ride = response[0]
         if recent_ride:
             return strava_ride_to_string(recent_ride, athlete_id)
         else:
