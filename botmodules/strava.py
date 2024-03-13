@@ -398,12 +398,17 @@ def strava(self, e):
                     request_json.refresh = refresh
 
                 rides_response = request_json("https://www.strava.com/api/v3/activities/%s" % e.input)
-                e.output = strava_extract_latest_ride(self, rides_response, e, e.nick, True)
+                if rides_response:
+                    e.output = strava_extract_latest_ride(self, rides_response, e, e.nick, True)
+                else:
+                    raise Exception('response empty')
             except urllib.error.URLError as err:
                 if err.code == 429:
-                    e.output = "Unable to retrieve rides from Strava ID: %s. Too many API requests" % (e.input)
+                    e.output = "Unable to retrieve activity: %s. The user may need to do: !strava auth Too many API requests" % (e.input)
                 else:
-                    e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (e.input)
+                    e.output = "Unable to retrieve activity: %s. The user may need to do: !strava auth" % (e.input)
+            except:
+                e.output = "Unable to retrieve activity: %s. The user may need to do: !strava auth" % (e.input)
         else:
             # We still have some sort of string, but it isn't numberic.
             e.output = "Sorry, %s is not a valid Strava ID." % (e.input)
