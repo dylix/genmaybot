@@ -6,7 +6,7 @@ def get_cat(self, e):
 get_cat.command = "!cats"
 
 def get_dvq(self, e):
-    e.output = "http://i.imgur.com/1lq54.jpg"
+    e.output = "https://i.imgur.com/CHLA4Mx.png http://i.imgur.com/1lq54.jpg"
     return e
 get_dvq.command = "!dvq"
 
