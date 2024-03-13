@@ -75,11 +75,12 @@ def strava_oath_code(self, e, state=None, code=None, error=None):
         try:
             response = urllib.request.urlopen(req, params)
             response = json.loads(response.read().decode('utf-8'))
-            strava_insert_token(state, response['access_token'], response['refresh_token'])
+            strava_insert_athlete(e.nick, response['athlete']['id'])
+            strava_insert_token(e.nick, response['access_token'], response['refresh_token'])
             e.output = "Strava token exchange completed successfully. You can close this window now."
             return e
-        except:
-            e.output = "Token exchange with Strava failed. Please try to authenticate again."
+        except Exception as err:
+            e.output = f"{err} Token exchange with Strava failed. Please try to authenticate again."
             return e
 
 
@@ -415,7 +416,7 @@ def strava(self, e):
             else:
                 e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth . Remember, if it's not on Strava, it didn't happen." % (e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please use the !strava auth command. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
 def strava_ftp(self, e):
@@ -493,7 +494,7 @@ def strava_ftp(self, e):
             else:
                 e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth . Remember, if it's not on Strava, it didn't happen." % (e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please use the !strava auth command. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 strava_ftp.command = "!ftp"
 strava_ftp.helptext = "Shows the users FTP. 8====D"
@@ -635,7 +636,7 @@ def strava_ytd(self, e, return_response = False):
             else:
                 e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (username)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth . Remember, if it's not on Strava, it didn't happen." % (e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please use the !strava auth command. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
 def strava_inside(self, e):
@@ -710,7 +711,7 @@ def strava_inside(self, e):
             else:
                 e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth . Remember, if it's not on Strava, it didn't happen." % (e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please use the !strava auth command. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
 def strava_outside(self, e):
@@ -785,7 +786,7 @@ def strava_outside(self, e):
             else:
                 e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth . Remember, if it's not on Strava, it didn't happen." % (e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please use the !strava auth command. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
 def strava_gear_timer(self, e):
@@ -866,7 +867,7 @@ def strava_gear_timer(self, e):
             else:
                 e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth. Remember, if it's not on Strava, it didn't happen." % (e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please use the !strava auth command. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
 def strava_weekly(self, e):
@@ -950,7 +951,7 @@ def strava_weekly(self, e):
             else:
                 e.output = "Unable to retrieve rides from Strava ID: %s. The user may need to do: !strava auth" % (strava_id)
     else:
-        e.output = "Sorry %s, you don't have a Strava ID setup yet, please enter one with the !strava set [id] command. Also run !strava auth Remember, if it's not on Strava, it didn't happen." % (e.nick)
+        e.output = "Sorry %s, you don't have a Strava ID setup yet, please use the !strava auth command. Remember, if it's not on Strava, it didn't happen." % (e.nick)
     return e
 
 # ==== begin beardedwizard
@@ -958,7 +959,7 @@ def strava_parent(self, e):
     strava_command_handler(self, e)
     return e
 strava_parent.command = "!strava"
-strava_parent.helptext = "Fetch last ride: \"!strava [optional nick]\", Set your ID: \"!strava set <athelete id>\", Reset your ID: \"!strava reset\", Sets a timer for certain gear. Useful for power meter battery life: \"!strava settimer 12/23/2024 StagesBike\", Allow the bot to read your rides: \"!strava auth\""
+strava_parent.helptext = "Fetch last ride: \"!strava [optional nick]\", Sets a timer for certain gear. Useful for power meter battery life: \"!strava settimer 12/23/2024 StagesBike\", Allow the bot to read your rides: \"!strava auth\", Reset your ID: \"!strava reset\""
 
 def strava_help(self, e):
     e.output += strava_parent.helptext
@@ -969,7 +970,7 @@ def strava_command_handler(self, e):
     val_offset = 1
     function = None
 
-    arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'compare': strava_compare, 'ftp': strava_ftp, 'get': strava, 'set': strava_set_athlete, 
+    arg_function_dict = {'auth': strava_oauth_exchange, 'authorize': strava_oath_code, 'compare': strava_compare, 'ftp': strava_ftp, 'get': strava, # DVQ SAID THIS IS DUMB 'set': strava_set_athlete, 
                          'settimer': strava_set_gear_timer, 'timer': strava_gear_timer, 'reset': strava_reset_athlete, 'inside': strava_inside, 'outside': strava_outside, 
                          'weekly': strava_weekly, 'ytd': strava_ytd, 'help': strava_help}
     arg_list = list(arg_function_dict.keys())
