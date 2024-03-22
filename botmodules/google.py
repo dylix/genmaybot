@@ -15,7 +15,7 @@ def google_search(bot, e):
     for result in google_results:
         e.output += f"#{result_num+1} | {result.description} | {result.url} || "
         result_num += 1
-    e.output = e.output[:-3]
+    e.output = bot.tools['insert_at_closest_space'](e.output[:-3].rstrip())
     return e
     
 google_search.command = "!g"

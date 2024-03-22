@@ -1191,6 +1191,7 @@ def strava_extract_weekly(self, response, e, athlete_id=None, username=None):
     weekly_distance = 0
     weekly_activities = 0
     weekly_avg_speed = 0
+    weekly_kj = 0
     if response:
         if athlete_id:
             athlete_info = strava_get_athlete_info(athlete_id)
@@ -1209,6 +1210,7 @@ def strava_extract_weekly(self, response, e, athlete_id=None, username=None):
                 weekly_moving_time += activity['moving_time']
                 weekly_activities += 1
                 weekly_avg_speed += activity['average_speed']
+                weekly_kj += activity['kilojoules']
 
 
                 #return f"{username} last rode outside {outside_time}\n{strava_ride_to_string(activity, athlete_id)}"
@@ -1218,13 +1220,18 @@ def strava_extract_weekly(self, response, e, athlete_id=None, username=None):
         movingTime = "{:02}h:{:02}m".format((mt.days*24)+mt.seconds//3600, (mt.seconds//60)%60)
         it = datetime.timedelta(seconds=float(weekly_elapsed_time - weekly_moving_time))
         idleTime = "{:02}h:{:02}m".format((it.days*24)+it.seconds//3600, str((it.seconds//60)%60))
-        
+        weekly_kj = weekly_kj / weekly_activities
+        if 'weight' in athlete_info and athlete_info['weight'] > 0:
+            weekly_kj = " | %s Avg kJ/kg per ride" % (round(int(weekly_kj) / int(athlete_info['weight']),2))
+        else:
+            weekly_kj += " | %s kJ per ride" % (round(weekly_kj,2))
+
         weekly_avg_speed = weekly_avg_speed / weekly_activities
         
         if measurement_pref == "feet":
-            return f"{username}'s weekly stats | Distance: {math.trunc(strava_convert_meters_to_miles(weekly_distance))} miles | Elevation: {math.trunc(strava_convert_meters_to_feet(weekly_elevation))} feet | Avg Speed: {round(strava_convert_meters_per_second_to_miles_per_hour(weekly_avg_speed), 1)} mph | Moving Time: {movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing Time: {idleTime}"
+            return f"{username}'s weekly stats | Distance: {math.trunc(strava_convert_meters_to_miles(weekly_distance))} miles | Elevation: {math.trunc(strava_convert_meters_to_feet(weekly_elevation))} feet | Avg Speed: {round(strava_convert_meters_per_second_to_miles_per_hour(weekly_avg_speed), 1)} mph | Moving Time: {movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing Time: {idleTime}{weekly_kj}"
         else:
-            return f"{username}'s weekly stats | Distance: {round(weekly_distance / 1000, 1)} kilometers | Elevation: {math.trunc(round(weekly_elevation, 0))} meters | Avg Speed: {round(float(weekly_avg_speed) * 3.6, 1)} kph | Moving Time:{movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing Time: {idleTime}"
+            return f"{username}'s weekly stats | Distance: {round(weekly_distance / 1000, 1)} kilometers | Elevation: {math.trunc(round(weekly_elevation, 0))} meters | Avg Speed: {round(float(weekly_avg_speed) * 3.6, 1)} kph | Moving Time:{movingTime} | Elapsed Time: {elapsedTime} | Sight-seeing Time: {idleTime}{weekly_kj}"
     else:
         return f"{username} hasn't ridden since the begining of the week. Time to harden the fuck up."
 
@@ -1299,6 +1306,13 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
                 return_string += " | Watts/KG: %s" % (round(int(recent_ride['average_watts']) / int(athlete_info['weight']), 2))
         if avg_hr > 0:
             return_string += " | %s watts/bpm" % (round(recent_ride['average_watts']/avg_hr, 2))
+
+    # Add kJ info
+    if 'kilojoules' in recent_ride:
+        if 'weight' in athlete_info and athlete_info['weight'] > 0:
+            return_string += " | %s kJ/kg " % (round(int(recent_ride['kilojoules']) / int(athlete_info['weight']),2))
+        else:
+            return_string += " | %s kJ " % (round(recent_ride['kilojoules'],2))
 
     return return_string
 
