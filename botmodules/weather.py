@@ -189,7 +189,7 @@ def onecall(self, e, location="", hourly=False, daily=False):
         return e
     exclude = ''
     #url = "https://dylix.org/weather.json"
-    url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&appid={}&units=imperial"
+    url = "https://api.openweathermap.org/data/3.0/onecall?lat={}&lon={}&appid={}&units=imperial"
     url = url.format(lat, lng, apikey)
     #print(url)
     try:
@@ -257,9 +257,11 @@ def onecall(self, e, location="", hourly=False, daily=False):
                     pass
                 
                 if country != "US":
-                    world_weather += f" {forecast_hour} {fahrenheit_to_celsius(hour['temp'])}°C ({int(hour['temp'])}°F) (Feels:{fahrenheit_to_celsius(hour['feels_like'])}°C ({int(hour['feels_like'])}°F)) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh({wind_speed}mph) {hour['weather'][0]['description']}{summary_icon} /"
+                    #world_weather += f" {forecast_hour} {fahrenheit_to_celsius(hour['temp'])}°C ({int(hour['temp'])}°F) (Feels:{fahrenheit_to_celsius(hour['feels_like'])}°C ({int(hour['feels_like'])}°F)) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh({wind_speed}mph) {hour['weather'][0]['description']}{summary_icon} /"
+                    world_weather += f" {forecast_hour} {fahrenheit_to_celsius(hour['temp'])}°C (Feels:{fahrenheit_to_celsius(hour['feels_like'])}°C) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed_kmh}kmh {hour['weather'][0]['description']}{summary_icon} /"
                 else:
-                    us_weather += f" {forecast_hour} {int(hour['temp'])}°F ({fahrenheit_to_celsius(hour['temp'])}°C) (Feels:{int(hour['feels_like'])}°F ({fahrenheit_to_celsius(hour['feels_like'])}°C)) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph({wind_speed_kmh}kmh) {hour['weather'][0]['description']}{summary_icon} /"
+                    #us_weather += f" {forecast_hour} {int(hour['temp'])}°F ({fahrenheit_to_celsius(hour['temp'])}°C) (Feels:{int(hour['feels_like'])}°F ({fahrenheit_to_celsius(hour['feels_like'])}°C)) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph({wind_speed_kmh}kmh) {hour['weather'][0]['description']}{summary_icon} /"
+                    us_weather += f" {forecast_hour} {int(hour['temp'])}°F (Feels:{int(hour['feels_like'])}°F) {precip_chance}{hour_precip_amount_combined}{wind_direction}{wind_arrow}@{wind_speed}mph {hour['weather'][0]['description']}{summary_icon} /"
 
         if country != "US":
             world_weather = world_weather[0:-1]
@@ -513,7 +515,7 @@ def get_sun(self, e):
         e.output = "No location was found"
         return e
     exclude = ''
-    url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&appid={}&units=imperial"
+    url = "https://api.openweathermap.org/data/3.0/onecall?lat={}&lon={}&appid={}&units=imperial"
     url = url.format(lat, lng, apikey)
     #print(url)
     try:

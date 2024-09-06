@@ -29,18 +29,21 @@ def get_fire_info(self, e, location=""):
     except:
         e.output = "No location was found"
         return e
-    url = f"https://api.weatherusa.net/v1/fire?q={lat},{lng}&radius=160934&acres=20&perimeters=false";
+    url = f"https://api.weatherusa.net/v1/fire?q={lat},{lng}&radius=321868&acres=20&perimeters=false";
     try:
         fire_json = request_json(url)
         features = fire_json['data']['features']
         num_fires = len(features)
+        top_fires = 3
         if num_fires >= 3:
             combined_fire_info = f'# of fires: {num_fires} | Listing biggest {top_fires} | '
         else:
             combined_fire_info = f'# of fires: {num_fires} | '
 
+        combined_fire_info += f'Radius 200 miles from {address} | '
+        
         fire_num = 1
-        fire_json_sorted = sorted(features, key=lambda k: k['properties'].get('acres', 0), reverse=True)
+        fire_json_sorted = sorted(features, key=lambda k: int(k['properties'].get('acres', 0)), reverse=True)
         for fire in fire_json_sorted:
             if fire_num > 3:
                 break

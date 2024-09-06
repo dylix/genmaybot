@@ -57,7 +57,7 @@ def google_news(self, e):
 
     return e
 
-google_news.command = "!googlenews"
+google_news.command = "!news"
 google_news.helptext = "Usage: !news - reports the top story. !news <query> reports news containing the specified words"
 
 def get_breaking(self, e):
@@ -131,5 +131,5 @@ def cycling_news(self, e):
     e.output = self.tools['insert_at_closest_space'](description)
     return e
 
-cycling_news.command="!news"
+cycling_news.command="!cyclingnews"
 cycling_news.helptext="Usage: !news\nShows the latest entry from the cyclingnews RSS feed"

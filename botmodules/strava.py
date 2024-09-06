@@ -4,7 +4,7 @@ import urllib.request
 import json
 import datetime
 import time
-import cherrypy, threading
+#import cherrypy, threading
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import random
@@ -1240,6 +1240,8 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
     moving_time = str(datetime.timedelta(seconds=recent_ride['moving_time']))
     ride_datetime = time.strptime(recent_ride['start_date_local'], "%Y-%m-%dT%H:%M:%SZ")
     time_start = time.strftime("%B %d, %Y at %I:%M %p", ride_datetime)
+    running_pace = ''
+
     # Try to get the average heart rate
     if 'average_heartrate' in recent_ride:
         avg_hr = recent_ride['average_heartrate']
@@ -1260,9 +1262,11 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
         miles = strava_convert_meters_to_miles(recent_ride['distance'])
         max_mph = strava_convert_meters_per_second_to_miles_per_hour(recent_ride['max_speed'])
         feet_climbed = strava_convert_meters_to_feet(recent_ride['total_elevation_gain'])
+        if "Run" in recent_ride['sport_type']:
+            running_pace = "%s min/mi / " % seconds_and_meters_to_timestamp(recent_ride['moving_time'], recent_ride['distance'], False)
         # Output string
         return_string = "%s on %s (http://www.strava.com/activities/%s)\n" % (recent_ride['name'], time_start, recent_ride['id'])
-        return_string += "%s Stats: %s mi in %s | %s mph average / %s mph max | %s feet climbed" % (recent_ride['sport_type'], miles, moving_time, mph, max_mph, int(feet_climbed))
+        return_string += "%s Stats: %s mi in %s | %s%s mph average / %s mph max | %s feet climbed" % (recent_ride['sport_type'], miles, moving_time, running_pace, mph, max_mph, int(feet_climbed))
         #× 9/5) + 32
         # ADD Temp
         if 'average_temp' in recent_ride:
@@ -1275,8 +1279,10 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
         km = round(float(recent_ride['distance'] / 1000), 1)  # meters to km
         max_kmh = round(float(recent_ride['max_speed']) * 3.6, 1)  # m/s to km/h
         m_climbed = recent_ride['total_elevation_gain']
+        if "Run" in recent_ride['sport_type']:
+            running_pace = "%s min/mi / " % seconds_and_meters_to_timestamp(recent_ride['moving_time'], recent_ride['distance'], True)
         return_string = "%s on %s (http://www.strava.com/activities/%s)\n" % (recent_ride['name'], time_start, recent_ride['id'])
-        return_string += "%s Stats: %s km in %s | %s km/h average / %s km/h max | %s meters climbed" % (recent_ride['sport_type'], km, moving_time, kmh, max_kmh, int(m_climbed))
+        return_string += "%s Stats: %s km in %s | %s%s km/h average / %s km/h max | %s meters climbed" % (recent_ride['sport_type'], km, moving_time, running_pace, kmh, max_kmh, int(m_climbed))
         # ADD TEMP
         if 'average_temp' in recent_ride:
             return_string += " | Avg. Temp: %s°C" % (int(recent_ride['average_temp']))
@@ -1309,12 +1315,52 @@ def strava_ride_to_string(recent_ride, athlete_id=None):  # if the athlete ID is
 
     # Add kJ info
     if 'kilojoules' in recent_ride:
+        total_ride_minutes = recent_ride['moving_time'] / 60
+        total_ride_hours = total_ride_minutes / 60
+        ride_kj_per_hour = int(recent_ride['kilojoules']) / total_ride_hours
         if 'weight' in athlete_info and athlete_info['weight'] > 0:
-            return_string += " | %s kJ/kg " % (round(int(recent_ride['kilojoules']) / int(athlete_info['weight']),2))
+            return_string += " | %s kJ/hr %s kJ/kg/hr %s kJ/kg " % ((round(ride_kj_per_hour,2), (round(ride_kj_per_hour/int(athlete_info['weight']),2)), (round(int(recent_ride['kilojoules']) / int(athlete_info['weight']),2))))
         else:
-            return_string += " | %s kJ " % (round(recent_ride['kilojoules'],2))
+            return_string += " | %s kJ/hr %s kJ " % ((round(ride_kj_per_hour,2), (round(recent_ride['kilojoules'],2))))
 
     return return_string
+
+def seconds_and_meters_to_timestamp(seconds, meters, metric):
+    """
+    Convert seconds and meters to minutes per mile in timestamp format (hh:mm:ss).
+    
+    Parameters:
+    seconds (int): Time taken in seconds
+    meters (int): Distance covered in meters
+    
+    Returns:
+    str: Time taken per mile in timestamp format (hh:mm:ss)
+    """
+    # Convert seconds to hours
+    hours = seconds // 3600
+    
+    # Convert meters to miles
+    if metric:
+        miles = meters / 1000
+    else:
+        miles = meters / 1609.34
+    
+    # Calculate pace in minutes per mile
+    pace_minutes_per_mile = (seconds / 60) / miles
+    
+    # Convert pace to timestamp format
+    minutes = int(pace_minutes_per_mile)
+    seconds = int((pace_minutes_per_mile - minutes) * 60)
+    hours = minutes // 60
+    minutes = minutes % 60
+    
+    # Format the result into a timestamp
+    if hours:
+        timestamp = "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+    else:
+        timestamp = "{:02d}:{:02d}".format(minutes, seconds)
+    
+    return timestamp
 
 def strava_get_athlete_info(athlete_id):
     #print('getting athlete info')

@@ -127,12 +127,12 @@ def search_string(words, command):
 
 	#Didnt find one
 	string = sql_search_value_from_command(command, search_string)
-	if string == None:
+	if string == None or string == 0:
 		add_to_irc_output("\n" + command + " not found")
 
 	#Found one
 	else:
-		add_to_irc_output("\n" + command + ": " + string)
+		add_to_irc_output("\n" + str(command) + ": " + str(string))
 	
 	quote.last_quote = string
 	return 1

@@ -52,9 +52,14 @@ def get_purpleair(self, botevent, cigs=False, dylix=False):
         else:
             stationid = botevent.input if botevent.input else botevent.user_station
             if stationid.isdigit() is False:
-                address, lat, lng, country = self.tools['findLatLong'](stationid)
-                stationid = get_stationid(self, lat, lng)
-    except AttributeError:
+                if not botevent.input:
+                    stationid = sys.modules['botmodules.userlocation'].get_station(botevent.user_station)
+                else:
+                    stationid = sys.modules['botmodules.userlocation'].get_station(botevent.input)
+                if not stationid:
+                    address, lat, lng, country = self.tools['findLatLong'](botevent.input)
+                    stationid = get_stationid(self, lat, lng)
+    except (TypeError, AttributeError):
         pass
     if not stationid:
         botevent.output = location_missing_msg
@@ -95,7 +100,14 @@ def get_purpleair(self, botevent, cigs=False, dylix=False):
     try:
         sensor_pm = pa_response['sensor']['pm2.5']
         sensor_name = pa_response['sensor']['name']
-        sensor_temp = f"Temp: {pa_response['sensor']['temperature']}°F / "
+        #if hasattr(pa_response['sensor']['temperature']):
+        #    sensor_temp = f"Temp: {pa_response['sensor']['temperature']}°F / "
+        #else:
+        #    sensor_temp = f"Temp: null°F / "
+        if is_json_key_present(pa_response['sensor'],'temperature'):
+            sensor_temp = f"Temp: {pa_response['sensor']['temperature']}°F / "
+        else:
+            sensor_temp = f"" #Temp: {pa_response['sensor']['temperature']}°F / "
         sensor_lastseen = datetime.datetime.fromtimestamp(pa_response['sensor']['last_seen'])
         sensor_lastseen = (datetime.datetime.now() - sensor_lastseen).total_seconds() / 60
         sensor_lastseen = round(int(sensor_lastseen),0)
@@ -114,6 +126,13 @@ def get_purpleair(self, botevent, cigs=False, dylix=False):
 
 get_purpleair.command = "!pa"
 get_purpleair.helptext = "Usage: !pa <stationid> Retrieves air quality info from purpleair.com"
+
+def is_json_key_present(json, key):
+    try:
+        buf = json[key]
+    except KeyError:
+        return False
+    return True
 
 def get_cigs(self, e):
     return get_purpleair(self, e, True)

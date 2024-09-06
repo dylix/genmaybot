@@ -21,36 +21,32 @@ from garminconnect import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables if defined
 email = os.getenv("EMAIL")
 password = os.getenv("PASSWORD")
 tokenstore = os.getenv("GARMINTOKENS") or "~/.garminconnect"
 tokenstore_base64 = os.getenv("GARMINTOKENS_BASE64") or "~/.garminconnect_base64"
 api = None
 
-# Example selections and settings
-today = datetime.date.today()
-startdate = today - datetime.timedelta(days=7)  # Select past week
-start = 0
-limit = 100
-start_badge = 1  # Badge related calls calls start counting at 1
-activitytype = ""  # Possible values are: cycling, running, swimming, multi_sport, fitness_equipment, hiking, walking, other
-activityfile = "MY_ACTIVITY.fit"  # Supported file types are: .fit .gpx .tcx
-weight = 89.6
-weightunit = 'kg'
-
 def dylix(self, e):
     try:
-        api = init_api(email, password)
-        #response = api.get_daily_weigh_ins(today.isoformat())
-        response = api.get_weigh_ins(startdate, today.isoformat())
-        
-        #response = {"startDate": "2024-03-25", "endDate": "2024-03-25", "dateWeightList": [{"samplePk": 1711385150750, "date": 1711363527000, "calendarDate": "2024-03-25", "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None, "sourceType": "INDEX_SCALE", "timestampGMT": 1711385127000, "weightDelta": 45.35923699999742}], "totalAverage": {"from": 1711324800000, "until": 1711411199999, "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None}}
-        #print(response)
-        #e.output = f"dylix's Garmin Scale @ {response['startDate']} Weight: {round(int(response['dateWeightList'][0]['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['dateWeightList'][0]['bmi']),2)} | Body Fat: {response['dateWeightList'][0]['bodyFat']}% | Body Water: {response['dateWeightList'][0]['bodyWater']}% | Bone Mass: {round(int(response['dateWeightList'][0]['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['dateWeightList'][0]['muscleMass'])/1000*2.205,2)}lbs"
-        e.output = f"dylix's garmin scale 7 day averages | Weight: {round(int(response['totalAverage']['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['totalAverage']['bmi']),2)} | Body Fat: {response['totalAverage']['bodyFat']}% | Body Water: {response['totalAverage']['bodyWater']}% | Bone Mass: {round(int(response['totalAverage']['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['totalAverage']['muscleMass'])/1000*2.205,2)}lbs"
+        if (e.input == "avg"):
+            today = datetime.date.today()
+            startdate = today - datetime.timedelta(days=30)  # Select past week
+            api = init_api(email, password)
+            response = api.get_weigh_ins(startdate, today.isoformat())
+            e.output = f"dylix's garmin scale 30 day average | Weight: {round(int(response['totalAverage']['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['totalAverage']['bmi']),2)} | Body Fat: {response['totalAverage']['bodyFat']}% | Body Water: {response['totalAverage']['bodyWater']}% | Bone Mass: {round(int(response['totalAverage']['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['totalAverage']['muscleMass'])/1000*2.205,2)}lbs"
+        else:
+            today = datetime.date.today()
+            api = init_api(email, password)
+            response = api.get_daily_weigh_ins(today.isoformat())
+            #response = {"startDate": "2024-03-25", "endDate": "2024-03-25", "dateWeightList": [{"samplePk": 1711385150750, "date": 1711363527000, "calendarDate": "2024-03-25", "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None, "sourceType": "INDEX_SCALE", "timestampGMT": 1711385127000, "weightDelta": 45.35923699999742}], "totalAverage": {"from": 1711324800000, "until": 1711411199999, "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None}}
+            e.output = f"dylix's Garmin Scale @ {response['startDate']} Weight: {round(int(response['dateWeightList'][0]['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['dateWeightList'][0]['bmi']),2)} | Body Fat: {response['dateWeightList'][0]['bodyFat']}% | Body Water: {response['dateWeightList'][0]['bodyWater']}% | Bone Mass: {round(int(response['dateWeightList'][0]['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['dateWeightList'][0]['muscleMass'])/1000*2.205,2)}lbs"
     except Exception as err:
-        e.output = f"Error: {err} It's possible dylix's fatass has not been on the scale yet"
+        today = datetime.date.today()
+        startdate = today - datetime.timedelta(days=30)  # Select past week
+        api = init_api(email, password)
+        response = api.get_weigh_ins(startdate, today.isoformat())
+        e.output = f"dylix's garmin scale 30 day average | Weight: {round(int(response['totalAverage']['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['totalAverage']['bmi']),2)} | Body Fat: {response['totalAverage']['bodyFat']}% | Body Water: {response['totalAverage']['bodyWater']}% | Bone Mass: {round(int(response['totalAverage']['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['totalAverage']['muscleMass'])/1000*2.205,2)}lbs"
     return e
 
 dylix.command = "!scale"
