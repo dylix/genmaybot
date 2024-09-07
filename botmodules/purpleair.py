@@ -105,7 +105,7 @@ def get_purpleair(self, botevent, cigs=False, dylix=False):
         #else:
         #    sensor_temp = f"Temp: null°F / "
         if is_json_key_present(pa_response['sensor'],'temperature'):
-            sensor_temp = f"Temp: {pa_response['sensor']['temperature']}°F / "
+            sensor_temp = f"Temp: {pa_response['sensor']['temperature']}°F({fahrenheit_to_celsius(pa_response['sensor']['temperature'])}°C) / "
         else:
             sensor_temp = f"" #Temp: {pa_response['sensor']['temperature']}°F / "
         sensor_lastseen = datetime.datetime.fromtimestamp(pa_response['sensor']['last_seen'])
@@ -113,7 +113,10 @@ def get_purpleair(self, botevent, cigs=False, dylix=False):
         sensor_lastseen = round(int(sensor_lastseen),0)
         calculated_aqi = calcAQIpm25(sensor_pm)
     except KeyError as error:
-        botevent.output = f"{json_error_msg.format(error)}"
+        if is_json_key_present(pa_response,'error'):
+            botevent.output = f"{pa_response['description']}"
+        else:
+            botevent.output = f"{json_error_msg.format(error)}"
         return botevent
     if cigs:
         cigs_per_day = calc_cigs_day(sensor_pm)
@@ -133,6 +136,9 @@ def is_json_key_present(json, key):
     except KeyError:
         return False
     return True
+
+def fahrenheit_to_celsius(temp):
+    return int(round((temp - 32)*5/9,0))
 
 def get_cigs(self, e):
     return get_purpleair(self, e, True)

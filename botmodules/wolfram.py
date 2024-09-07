@@ -21,7 +21,7 @@ def get_wolfram(self, e):
         location = user.get_location(e.nick)
 
             
-    location = urllib.parse.quote(location)
+    location = urllib.parse.quote(str(location))
             
     socket.setdefaulttimeout(30)
     url = "http://api.wolframalpha.com/v2/query?appid=%s&format=plaintext&input=%s&location=%s" % (self.botconfig["APIkeys"]["wolframAPIkey"], urllib.parse.quote(e.input), location)
