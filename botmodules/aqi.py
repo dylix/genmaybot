@@ -3,10 +3,32 @@ import unittest
 import requests
 import datetime
 from copy import deepcopy
+import openmeteo_requests
+from openmeteo_sdk.Variable import Variable
+import math
+import sys
 
 error_msg = "Could not retrieve current air quality data."
 json_error_msg = "JSON schema in response has changed. Please fix me. Key error: {}"
 location_missing_msg = "Use !setlocation <location> to save your location to the bot or use !aqi <zipcode>"
+# http://en.wikipedia.org/wiki/Extreme_points_of_the_United_States#Westernmost
+top = 49.3457868 # north lat
+left = -124.7844079 # west long
+right = -66.9513812 # east long
+bottom =  24.7433195 # south lat
+
+def IsUSA(latlngs):
+    """ Accepts a list of lat/lng tuples. 
+        returns the list of tuples that are within the bounding box for the US.
+        NB. THESE ARE NOT NECESSARILY WITHIN THE US BORDERS!
+    """
+    inside_box = []
+    for (lat, lng) in latlngs:
+        if bottom <= lat <= top and left <= lng <= right:
+            #inside_box.append((lat, lng))
+            return True
+    #return inside_box
+    return False
 
 def get_zipcode(self, lat, lng):
     url = f"http://api.geonames.org/findNearbyPostalCodesJSON?lat={lat}&lng={lng}&username=dylix"
@@ -16,11 +38,75 @@ def get_zipcode(self, lat, lng):
     except:
         return None
 
+def get_euroaqi(self, botevent, address, lat, lng, country):
+    #print(f"euro aqi: {self} {address} {lat} {lng} {country}")
+    openmeteo = openmeteo_requests.Client()
+
+    # Make sure all required weather variables are listed here
+    # The order of variables in hourly or daily is important to assign them correctly below
+    url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+    params = {
+        "latitude": lat,
+        "longitude": lng,
+        "current": ["pm10", "pm2_5", "european_aqi"]
+    }
+    responses = openmeteo.weather_api(url, params=params)
+    response = responses[0]    
+    # Current values
+    current = response.Current()
+    current_european_aqi = current.Variables(2).Value()
+    current_variables = list(map(lambda i: current.Variables(i), range(0, current.VariablesLength())))
+    #current_temperature_2m = next(filter(lambda x: x.Variable() == Variable.temperature and x.Altitude() == 2, current_variables))
+    #current_relative_humidity_2m = next(filter(lambda x: x.Variable() == Variable.relative_humidity and x.Altitude() == 2, current_variables))
+
+    #print(f"Current time {current.Time()}")
+    pm10 = current_variables[0].Value()
+    pm2p5 = current_variables[1].Value()
+    #print(f"Current temperature_2m {current_temperature_2m.Value()}")
+    #print(f"Current relative_humidity_2m {current_relative_humidity_2m.Value()}")
+    botevent.output = f"Air quality: {address} | EAQI: {math.floor(current_european_aqi)} | PM2.5: {calcAQIpm25(pm2p5)} | PM10: {calcAQIpm10(pm10)}"
+    #botevent.output = f"{location} - Air quality: {current_pm}{current_ozone}{tomorrow_forecast}"
+    return botevent
+
+
 def get_aqi(self, botevent):
     zipcode = ""
+    address = ""
+    lat = ""
+    lng = ""
+    country = ""
     try:
         zipcode = botevent.input if botevent.input else botevent.user_location
         if zipcode.isdigit() is False:
+            if not zipcode:
+                if not botevent.input:
+                    zipcode = sys.modules['botmodules.userlocation'].get_location(botevent.user_location)
+                    if zipcode:
+                        address, lat, lng, country = self.tools['findLatLong'](zipcode)
+                else:
+                    address, lat, lng, country = self.tools['findLatLong'](botevent.input)
+                    if not address:
+                        zipcode = sys.modules['botmodules.userlocation'].get_location(botevent.input)
+                        address, lat, lng, country = self.tools['findLatLong'](zipcode)
+            else:
+                if not botevent.input:
+                    if not zipcode:
+                        zipcode = sys.modules['botmodules.userlocation'].get_location(botevent.user_location)
+                else:
+                    zipcode = sys.modules['botmodules.userlocation'].get_location(zipcode)
+                    if not zipcode:
+                        #zipcode = sys.modules['botmodules.userlocation'].get_location(botevent.input)
+                        zipcode = botevent.input
+                try:
+                    address, lat, lng, country = self.tools['findLatLong'](zipcode)
+                except:
+                    botevent.output = "Could not find matching location. Using State or Country? Use only two letter abbreviations"
+                    return botevent
+            if IsUSA([(lat,lng)]):
+                zipcode = get_zipcode(self, lat, lng)
+            else:
+                return get_euroaqi(self, botevent, address, lat, lng, country)
+        else:
             address, lat, lng, country = self.tools['findLatLong'](zipcode)
             zipcode = get_zipcode(self, lat, lng)
     except AttributeError:
@@ -65,7 +151,8 @@ def get_aqi(self, botevent):
     try:
         for observation in current_response:
             if observation['ParameterName'] == "O3":
-                current_ozone = f"Ozone: {observation['AQI']} ({observation['Category']['Name']})"
+                current_ozone = f"AQI: {observation['AQI']} ({observation['Category']['Name']})"
+                location = f"{observation['ReportingArea']}, {observation['StateCode']}"
             elif 'PM' in observation['ParameterName']:
                 current_pm = f"{current_pm}{observation['ParameterName']}: {observation['AQI']} ({observation['Category']['Name']}) "
                 location = f"{observation['ReportingArea']}, {observation['StateCode']}"
@@ -86,6 +173,76 @@ def get_aqi(self, botevent):
 get_aqi.command = "!aqi"
 get_aqi.helptext = "Usage: !aqi <zipcode> Retrieves air quality info from airnow.gov"
 
+def calcAQIpm25(pm25):
+    pm1 = 0
+    pm2 = 12
+    pm3 = 35.4
+    pm4 = 55.4
+    pm5 = 150.4
+    pm6 = 250.4
+    pm7 = 350.4
+    pm8 = 500.4
+    aqi1 = 0
+    aqi2 = 50
+    aqi3 = 100
+    aqi4 = 150
+    aqi5 = 200
+    aqi6 = 300
+    aqi7 = 400
+    aqi8 = 500
+    aqipm25 = 0
+    pm25 = round(10 * pm25) / 10
+    if pm25 >= pm1 and pm25 <= pm2:
+        aqipm25 = ((aqi2 - aqi1) / (pm2 - pm1)) * (pm25 - pm1) + aqi1
+    elif pm25 >= pm2 and pm25 <= pm3:
+        aqipm25 = ((aqi3 - aqi2) / (pm3 - pm2)) * (pm25 - pm2) + aqi2
+    elif pm25 >= pm3 and pm25 <= pm4:
+        aqipm25 = ((aqi4 - aqi3) / (pm4 - pm3)) * (pm25 - pm3) + aqi3
+    elif pm25 >= pm4 and pm25 <= pm5:
+        aqipm25 = ((aqi5 - aqi4) / (pm5 - pm4)) * (pm25 - pm4) + aqi4
+    elif pm25 >= pm5 and pm25 <= pm6:
+        aqipm25 = ((aqi6 - aqi5) / (pm6 - pm5)) * (pm25 - pm5) + aqi5
+    elif pm25 >= pm6 and pm25 <= pm7:
+        aqipm25 = ((aqi7 - aqi6) / (pm7 - pm6)) * (pm25 - pm6) + aqi6
+    elif pm25 >= pm7 and pm25 <= pm8:
+        aqipm25 = ((aqi8 - aqi7) / (pm8 - pm7)) * (pm25 - pm7) + aqi7
+    else:
+        return 501
+    return int(aqipm25)
+    
+def calcAQIpm10(pm10):
+    pm1 = 0
+    pm2 = 54
+    pm3 = 154
+    pm4 = 254
+    pm5 = 354
+    pm6 = 424
+    pm7 = 504
+    pm8 = 604
+    aqi1 = 0
+    aqi2 = 50
+    aqi3 = 100
+    aqi4 = 150
+    aqi5 = 200
+    aqi6 = 300
+    aqi7 = 400
+    aqi8 = 500
+    aqipm10 = 0
+    if pm10 >= pm1 and pm10 <= pm2:
+        aqipm10 = ((aqi2 - aqi1) / (pm2 - pm1)) * (pm10 - pm1) + aqi1
+    elif pm10 >= pm2 and pm10 <= pm3:
+        aqipm10 = ((aqi3 - aqi2) / (pm3 - pm2)) * (pm10 - pm2) + aqi2
+    elif pm10 >= pm3 and pm10 <= pm4:
+        aqipm10 = ((aqi4 - aqi3) / (pm4 - pm3)) * (pm10 - pm3) + aqi3
+    elif pm10 >= pm4 and pm10 <= pm5:
+        aqipm10 = ((aqi5 - aqi4) / (pm5 - pm4)) * (pm10 - pm4) + aqi4
+    elif pm10 >= pm5 and pm10 <= pm6:
+        aqipm10 = ((aqi6 - aqi5) / (pm6 - pm5)) * (pm10 - pm5) + aqi5
+    elif pm10 >= pm6 and pm10 <= pm7:
+        aqipm10 = ((aqi7 - aqi6) / (pm7 - pm6)) * (pm10 - pm6) + aqi6
+    elif pm10 >= pm7 and pm10 <= pm8:
+        aqipm10 = ((aqi8 - aqi7) / (pm8 - pm7)) * (pm10 - pm7) + aqi7
+    return int(aqipm10)
 
 class TestEvent(object):
     def __init__(self):
