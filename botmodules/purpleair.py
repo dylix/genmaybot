@@ -99,6 +99,8 @@ def get_purpleair(self, botevent, cigs=False, dylix=False):
 
     try:
         sensor_pm = pa_response['sensor']['pm2.5']
+        if sensor_pm > 500:
+            sensor_pm = pa_response['sensor']['pm2.5_alt']
         sensor_name = pa_response['sensor']['name']
         #if hasattr(pa_response['sensor']['temperature']):
         #    sensor_temp = f"Temp: {pa_response['sensor']['temperature']}°F / "
