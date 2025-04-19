@@ -375,10 +375,15 @@ def onecall(self, e, location="", hourly=False, daily=False):
         sunset = sunset.strftime('%-I:%M%p')
         
         outlook_now_hour = datetime.datetime.fromtimestamp(current_time).hour
-        #outlook_later_hour = datetime.datetime.fromtimestamp(current_time) + datetime.timedelta(hours=4)
+        #outlook_later_hour = (datetime.datetime.fromtimestamp(current_time) + datetime.timedelta(hours=4)).hour
+        #if outlook_later_hour < outlook_now_hour:
+        #    outlook_later_hour = 23
+        #print(outlook_later_hour)
 
         if results_json['hourly'][outlook_now_hour]['weather'][0]['description'] != results_json['daily'][0]['weather'][0]['description']:
+        #if results_json['hourly'][outlook_now_hour]['weather'][0]['description'] != results_json['hourly'][outlook_later_hour]['weather'][0]['description']:
             outlook = "%s %s -> %s %s" % (results_json['hourly'][outlook_now_hour]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['hourly'][outlook_now_hour]['weather'][0]['icon']), results_json['daily'][0]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['daily'][0]['weather'][0]['icon']))
+            #outlook = "%s %s -> %s %s" % (results_json['hourly'][outlook_now_hour]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['hourly'][outlook_now_hour]['weather'][0]['icon']), results_json['hourly'][outlook_later_hour]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['hourly'][outlook_later_hour]['weather'][0]['icon']))
         else:
             outlook = "%s %s" % (results_json['hourly'][outlook_now_hour]['weather'][0]['description'].title(), weather_summary_to_icon(results_json['hourly'][outlook_now_hour]['weather'][0]['icon']))
 
@@ -409,12 +414,12 @@ def onecall(self, e, location="", hourly=False, daily=False):
                                   wind_direction, wind_speed, wind_speed_kmh,
                                   cloud_cover, max_temp, max_temp_c, min_temp, min_temp_c, hour_precip_amount_combined, sunrise, sunset, outlook)
         else: #Outside of the US
-            outlookt = re.search("(-?\d+)°F", outlook)
+            outlookt = re.search(r"(-?\d+)°F", outlook)
             if outlookt:
                 try:
                     tmp = int(outlookt.group(1))
                     tmpstr = "{}°C".format(int(round((tmp - 32)*5/9,0)))
-                    outlook = re.sub("-?\d+°F", tmpstr, outlook)
+                    outlook = re.sub(r"-?\d+°F", tmpstr, outlook)
                 except:
                     pass
 
@@ -489,6 +494,7 @@ def dylixpaste(self, title, content):
     data = { "title": title, "text": content }
     data = json.dumps(data)
     response = requests.post("https://plutonicx.org/paste2db", data=data, headers=headers)
+    print(response)
     paste = response.json()
     return paste['url']
 

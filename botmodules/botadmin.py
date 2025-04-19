@@ -240,6 +240,17 @@ def part_chan(line, nick, self, c):
             return "Not in " + chan
 part_chan.admincommand = "part"
 
+def op_cmd(line, nick, self, c):
+    if len(line.split(" ")) > 2:
+        chan = line.split(" ")[1]
+        nick2op = "+o " + line.split(" ")[2]
+        c.mode(chan, nick2op)
+        self.logger.info("Opped ({}) on ({}), requested by admin ({})".format(nick2op, chan, nick))
+        return "Opped %s on %s" % (nick2op, chan)
+    else:
+        return "Correct syntax: op #channel nickname"
+op_cmd.admincommand="op"
+
 def say_cmd(line, nick, self, c):
     if len(line.split(" ")) > 2:
         chan = line.split(" ")[1]

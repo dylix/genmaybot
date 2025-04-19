@@ -102,9 +102,9 @@ def google_url(searchterm, regexstring):
     results = results_json['items']
 
     for result in results:
-        print(result['link'])
+        #print(result['link'])
         m = re.search(regexstring, result['link'])
-        print(m)
+        #print(m)
         if (m):
             url = result['link']
             url = url.replace('%25', '%')

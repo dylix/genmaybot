@@ -1,4 +1,4 @@
-import json, urllib.request, urllib.error, urllib.parse, re, botmodules.purpleair as purpleair
+import json, urllib.request, urllib.error, urllib.parse, re, requests, botmodules.purpleair as purpleair
 
 def dylix(self, e):
     hr = request_json("https://dylix.org/db2json?db=heartrate&limit=1")[0]
@@ -34,3 +34,31 @@ def request_json(url):
     response = urllib.request.urlopen(req)
     response = json.loads(response.read().decode('utf-8'))
     return response
+
+def getWebDadJoke(self, e):
+    USER_AGENT = f"jokebot/v1 (https://dylix.org)"
+    HEADERS = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+    try:
+        response = requests.get("https://icanhazdadjoke.com/", headers=HEADERS)
+        e.output = response.json()["joke"]
+    except:
+        pass
+    return e
+getWebDadJoke.command = "!joke"
+getWebDadJoke.helptext = "!joke - gets a random dad joke"
+
+def frisco(self, e):
+    try:
+        e.output = f"Theme song: https://www.youtube.com/watch?v=saJ80UKo1YU";
+    except:
+        pass
+    return e
+
+frisco.command = "!frisco"
+frisco.helptext = ""
+
+def frisko(self, e):
+    return frisco(self,e)
+
+frisko.command = "!frisko"
+frisko.helptext = ""

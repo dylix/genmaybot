@@ -48,13 +48,15 @@ def get_euroaqi(self, botevent, address, lat, lng, country):
     params = {
         "latitude": lat,
         "longitude": lng,
-        "current": ["pm10", "pm2_5", "european_aqi"]
+        "current": ["pm10", "pm2_5", "european_aqi", "european_aqi_pm2_5", "european_aqi_pm10"]
     }
     responses = openmeteo.weather_api(url, params=params)
     response = responses[0]    
     # Current values
     current = response.Current()
     current_european_aqi = current.Variables(2).Value()
+    european_aqi_pm2_5 = current.Variables(3).Value()
+    european_aqi_pm10 = current.Variables(4).Value()
     current_variables = list(map(lambda i: current.Variables(i), range(0, current.VariablesLength())))
     #current_temperature_2m = next(filter(lambda x: x.Variable() == Variable.temperature and x.Altitude() == 2, current_variables))
     #current_relative_humidity_2m = next(filter(lambda x: x.Variable() == Variable.relative_humidity and x.Altitude() == 2, current_variables))
@@ -64,7 +66,11 @@ def get_euroaqi(self, botevent, address, lat, lng, country):
     pm2p5 = current_variables[1].Value()
     #print(f"Current temperature_2m {current_temperature_2m.Value()}")
     #print(f"Current relative_humidity_2m {current_relative_humidity_2m.Value()}")
-    botevent.output = f"Air quality: {address} | EAQI: {math.floor(current_european_aqi)} | PM2.5: {calcAQIpm25(pm2p5)} | PM10: {calcAQIpm10(pm10)}"
+    
+    
+    #botevent.output = f"Air quality: {address} | EAQI: {math.floor(current_european_aqi)} | PM2.5: {calcAQIpm25(pm2p5)} | PM10: {calcAQIpm10(pm10)}"
+    botevent.output = f"Air quality: {address} | EAQI: {math.floor(current_european_aqi)} | PM2.5: {math.floor(european_aqi_pm2_5)} | PM10: {math.floor(european_aqi_pm10)}"
+    
     #botevent.output = f"{location} - Air quality: {current_pm}{current_ozone}{tomorrow_forecast}"
     return botevent
 

@@ -1202,6 +1202,7 @@ def strava_extract_weekly(self, response, e, athlete_id=None, username=None):
         else:
             measurement_pref = None
             athlete_info = None
+        total_rides = 0
         for activity in response:
             if activity['type'] == 'Ride' or activity['type'] == 'EBikeRide' or activity['type'] == 'VirtualRide':
                 weekly_distance += activity['distance']
@@ -1211,7 +1212,9 @@ def strava_extract_weekly(self, response, e, athlete_id=None, username=None):
                 weekly_activities += 1
                 weekly_avg_speed += activity['average_speed']
                 weekly_kj += activity['kilojoules']
-
+                total_rides += 1
+        if total_rides == 0:
+            return f"{username} hasn't ridden since the begining of the week. Time to harden the fuck up."
 
                 #return f"{username} last rode outside {outside_time}\n{strava_ride_to_string(activity, athlete_id)}"
         et = datetime.timedelta(seconds=float(weekly_elapsed_time))

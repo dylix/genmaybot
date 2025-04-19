@@ -1,5 +1,6 @@
 import random
 import urllib.request, urllib.error, urllib.parse
+import json
 from datetime import datetime, timedelta
 
 def error_generator(self, e):
@@ -108,7 +109,19 @@ def generatelols():
     return output
 
 def fortune(self, e):
-    e.output = urllib.request.urlopen("http://www.fortunefortoday.com/getfortuneonly.php").read().decode('utf-8').replace('\n', ' ').replace('\r', '').strip()
+    url = "https://aphorismcookie.herokuapp.com"
+    try:
+        request = urllib.request.Request(url, None, {'Referer': 'https://dylix.org/'})
+        response = urllib.request.urlopen(request)
+        #print("skipping download")
+        #with open("test.json", "r") as read_file:
+        #    data = json.load(read_file)
+        # UNCOMMENT RESULTS_JSON TOO
+    except urllib.error.HTTPError as err:
+        self.logger.exception("Exception in fortune request")
+    results_json = json.loads(response.read().decode('utf-8'))
+    e.output = results_json['data']['message']
+    #e.output = urllib.request.urlopen("http://www.fortunefortoday.com/getfortuneonly.php").read().decode('utf-8').replace('\n', ' ').replace('\r', '').strip()
     return e
 
 fortune.command = "!fortune"

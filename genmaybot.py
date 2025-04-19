@@ -43,6 +43,10 @@ class TestBot(SingleServerIRCBot):
         SingleServerIRCBot.__init__(
             self, [(server, port)], nickname, nickname)
         self.channel = channel
+        self.nickname = nickname
+        self.server = server
+        self.port = port
+        self.__connect_params = None
         self.doingcommand = False
 
         self.connection.buffer_class = buffer.LenientDecodingLineBuffer
@@ -70,20 +74,40 @@ class TestBot(SingleServerIRCBot):
             cfgfile = open('genmaybot.cfg')
         except IOError:
             logging.exception("You need to create a .cfg file using the example")
-            sys.exit(1)
+            os._exit(500)
+            os.system(f"pkill -f {os.path.basename(__file__)}")
 
         config.read_file(cfgfile)
         self.botconfig = config
         self.botadmins = config["irc"]["botadmins"].split(",")
         self.botadmin_webui_tokens = {}
+        self.serverpassword = config['irc']['serverpassword']
         # Tokens for the web UI
         for admin in self.botadmins:
             self.botadmin_webui_tokens[admin] = None
 
         self.logger.info("Bot admins: {}".format(self.botadmins))
 
+    def _connect(self):
+        """
+        Establish a connection to the server at the front of the server_list.
+        """
+        #server = self.servers.peek()
+        try:
+            self.connect(
+                self.server,
+                self.port,
+                self.nickname,
+                self.serverpassword,
+                ircname=self.nickname,
+                #self.__connect_params,
+            )
+        except irc.client.ServerConnectionError:
+            self.connection._handle_event(
+                irc.client.Event("disconnect", self.connection.server, "", [""])
+            )
+
     def on_nicknameinuse(self, c, e):
-        print('in nickname:',c.get_nickname())
         new_nick= self.botconfig['irc']['nick'] + "_"
         c.nick(new_nick)
         c.privmsg("NickServ", "RECOVER %s %s" % (self.botnick, self.botconfig['irc']['identpassword']))
@@ -95,7 +119,10 @@ class TestBot(SingleServerIRCBot):
             c.join(e.target)
 
     def on_disconnect(self, c, e):
-        self.logger.info("DISCONNECT: " + str(e.arguments))
+        #self.logger.info("DISCONNECT: " + str(e.arguments))
+        #self.die()
+        os._exit(500)
+        os.system(f"pkill -f {os.path.basename(__file__)}")
 
     def on_welcome(self, c, e):
         c.privmsg("NickServ", "identify " + self.botconfig['irc']['identpassword'])
@@ -192,6 +219,7 @@ class TestBot(SingleServerIRCBot):
         line = self.admincommand
         command = line.split(" ")[0]
         self.admincommand = ""
+        return
         try:
             if e.arguments[1].find("registered") != -1 and line != "":
                 say = self.admincommands[command](line, nick, self, c)
@@ -235,6 +263,9 @@ class TestBot(SingleServerIRCBot):
         except:
             pass
 
+        #if "pheny" in from_nick:
+        #    notice = True
+        
         if private or notice:
             linesource = from_nick
         else:
@@ -529,7 +560,8 @@ def main():
             cfgfile = open('genmaybot.cfg')
         except IOError:
             root_logger.exception("You need to create a .cfg file using the example")
-            sys.exit(1)
+            os._exit(500)
+            os.system(f"pkill -f {os.path.basename(__file__)}")
 
         config.read_file(cfgfile)
         DEBUG_LOG_FILENAME = config['misc']['debug_log']
@@ -547,9 +579,9 @@ def main():
 
 
         debug_log_handler = logging.handlers.RotatingFileHandler(
-            DEBUG_LOG_FILENAME, maxBytes=2*(1024**2), backupCount=20)
+            DEBUG_LOG_FILENAME, maxBytes=2*(1024**2), backupCount=0)
         event_log_handler = logging.handlers.RotatingFileHandler(
-            EVENT_LOG_FILENAME, maxBytes=2*(1024**2), backupCount=20)
+            EVENT_LOG_FILENAME, maxBytes=2*(1024**2), backupCount=0)
 
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s.%(funcName)s:%(lineno)d - %(message)s", datefmt='%m-%d %H:%M:%S')
 
@@ -574,7 +606,8 @@ def main():
         else:
             print(
                 "Usage: bot.py <server[:port]> <channel> <nickname> \nAlternatively configure the server in the .cfg")
-            sys.exit(1)
+            os._exit(500)
+            os.system(f"pkill -f {os.path.basename(__file__)}")
 
     else:
         s = sys.argv[1].split(":", 1)
@@ -584,7 +617,8 @@ def main():
                 port = int(s[1])
             except ValueError:
                 root_logger.exception("Error: Erroneous port.")
-                sys.exit(1)
+                os._exit(500)
+                os.system(f"pkill -f {os.path.basename(__file__)}")
         else:
             port = 6667
         channel = sys.argv[2]
@@ -598,7 +632,9 @@ def main():
             root_logger.exception("Something went horribly wrong while trying to spawn the bot (try #{}):".format(retries))
 
     root_logger.error("Could not recover. Exiting process.")
-    os._exit(1) #JUST DIE ALREADY
+    #self.die()
+    os._exit(500) #JUST DIE ALREADY
+    os.system(f"pkill -f {os.path.basename(__file__)}")
 
 if __name__ == "__main__":
     try:
@@ -608,4 +644,5 @@ if __name__ == "__main__":
     except:
         logging.exception("Exception in main thread, big trouble:")
     finally:
-        os._exit(1)
+        os._exit(500)
+        os.system(f"pkill -f {os.path.basename(__file__)}")

@@ -52,6 +52,72 @@ def dylix(self, e):
 dylix.command = "!scale"
 dylix.helptext = "!scale - gets dylix's scale info"
 
+def dylixTR(self, e):
+    try:
+        today = datetime.date.today()
+        api = init_api(email, password)
+        response = api.get_training_readiness(today.isoformat())[0]
+        #print(response)
+        #e.output = response
+        #response = {"startDate": "2024-03-25", "endDate": "2024-03-25", "dateWeightList": [{"samplePk": 1711385150750, "date": 1711363527000, "calendarDate": "2024-03-25", "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None, "sourceType": "INDEX_SCALE", "timestampGMT": 1711385127000, "weightDelta": 45.35923699999742}], "totalAverage": {"from": 1711324800000, "until": 1711411199999, "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None}}
+        e.output = f"dylix's Training Readiness @ {response['calendarDate']} Score: {response['score']} {format_string(response['level'])} | Recovery Time: {round(int(response['recoveryTime'])/60)} hours | Feedback: {format_string(response['feedbackShort'])} | Sleep Score: {response['sleepScore']} | Acute Load: {response['acuteLoad']} | HRV Weekly Avg: {response['hrvWeeklyAverage']}"
+    except Exception as err:
+        #today = datetime.date.today()
+        #startdate = today - datetime.timedelta(days=30)  # Select past week
+        #api = init_api(email, password)
+        #response = api.get_weigh_ins(startdate, today.isoformat())
+        #e.output = f"dylix's garmin scale 30 day average | Weight: {round(int(response['totalAverage']['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['totalAverage']['bmi']),2)} | Body Fat: {response['totalAverage']['bodyFat']}% | Body Water: {response['totalAverage']['bodyWater']}% | Bone Mass: {round(int(response['totalAverage']['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['totalAverage']['muscleMass'])/1000*2.205,2)}lbs"
+        e.output = f"Garmin connect error: {err}"
+    return e
+
+dylixTR.command = "!tr"
+dylixTR.helptext = "!tr - gets dylix's trainingReadiness info"
+
+def dylixBB(self, e):
+    try:
+        today = datetime.date.today()
+        api = init_api(email, password)
+        startdate = today - datetime.timedelta(days=0)
+        response = api.get_body_battery(startdate.isoformat(), today.isoformat())[0]
+        #print(response)
+        #e.output = response
+        #response = {"startDate": "2024-03-25", "endDate": "2024-03-25", "dateWeightList": [{"samplePk": 1711385150750, "date": 1711363527000, "calendarDate": "2024-03-25", "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None, "sourceType": "INDEX_SCALE", "timestampGMT": 1711385127000, "weightDelta": 45.35923699999742}], "totalAverage": {"from": 1711324800000, "until": 1711411199999, "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None}}
+        e.output = f"dylix's Body Battery @ {response['date']} Charged: {response['charged']} | Drained: {response['drained']} | Feedback: {format_string(response['bodyBatteryDynamicFeedbackEvent']['feedbackLongType'])}"
+    except Exception as err:
+        #today = datetime.date.today()
+        #startdate = today - datetime.timedelta(days=30)  # Select past week
+        #api = init_api(email, password)
+        #response = api.get_weigh_ins(startdate, today.isoformat())
+        #e.output = f"dylix's garmin scale 30 day average | Weight: {round(int(response['totalAverage']['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['totalAverage']['bmi']),2)} | Body Fat: {response['totalAverage']['bodyFat']}% | Body Water: {response['totalAverage']['bodyWater']}% | Bone Mass: {round(int(response['totalAverage']['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['totalAverage']['muscleMass'])/1000*2.205,2)}lbs"
+        e.output = f"Garmin connect error: {err}"
+    return e
+
+dylixBB.command = "!bb"
+dylixBB.helptext = "!bb - gets dylix's body battery info"
+
+def dylixSteps(self, e):
+    try:
+        today = datetime.date.today()
+        api = init_api(email, password)
+        startdate = today - datetime.timedelta(days=0)
+        response = api.get_daily_steps(startdate.isoformat(), today.isoformat())[0]
+        walkMiles = meters_to_miles(response['totalDistance'])
+        #print(response)
+        #e.output = response
+        #response = {"startDate": "2024-03-25", "endDate": "2024-03-25", "dateWeightList": [{"samplePk": 1711385150750, "date": 1711363527000, "calendarDate": "2024-03-25", "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None, "sourceType": "INDEX_SCALE", "timestampGMT": 1711385127000, "weightDelta": 45.35923699999742}], "totalAverage": {"from": 1711324800000, "until": 1711411199999, "weight": 74900.0, "bmi": 23.100000381469727, "bodyFat": 16.2, "bodyWater": 61.2, "boneMass": 4710, "muscleMass": 31600, "physiqueRating": None, "visceralFat": None, "metabolicAge": None}}
+        e.output = f"dylix's Steps @ {response['calendarDate']} Steps: {response['totalSteps']} | Distance: {walkMiles:.2f} miles | Step Goal: {response['stepGoal']}"
+    except Exception as err:
+        #today = datetime.date.today()
+        #startdate = today - datetime.timedelta(days=30)  # Select past week
+        #api = init_api(email, password)
+        #response = api.get_weigh_ins(startdate, today.isoformat())
+        #e.output = f"dylix's garmin scale 30 day average | Weight: {round(int(response['totalAverage']['weight'])/1000*2.205,2)}lbs | BMI: {round(float(response['totalAverage']['bmi']),2)} | Body Fat: {response['totalAverage']['bodyFat']}% | Body Water: {response['totalAverage']['bodyWater']}% | Bone Mass: {round(int(response['totalAverage']['boneMass'])/1000*2.205,2)}lbs | Muscle Mass: {round(int(response['totalAverage']['muscleMass'])/1000*2.205,2)}lbs"
+        e.output = f"Garmin connect error: {err}"
+    return e
+
+dylixSteps.command = "!steps"
+dylixSteps.helptext = "!steps - gets dylix's step info"
+
 def get_credentials():
     """Get user credentials."""
 
@@ -60,6 +126,21 @@ def get_credentials():
 
     return email, password
 
+def meters_to_miles(meters):
+    """Convert meters to miles."""
+    return meters / 1609.344
+
+def format_string(s):
+    """
+    Converts a string with underscores into a properly capitalized phrase.
+    
+    Example:
+    "TIME_TO_RECHARGE" -> "Time To Recharge"
+    
+    :param s: Input string with underscores
+    :return: Formatted string with spaces and proper capitalization
+    """
+    return ' '.join(word.capitalize() for word in s.lower().split('_'))
 
 def init_api(email, password):
     """Initialize Garmin API with your credentials."""

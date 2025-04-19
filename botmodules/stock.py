@@ -1,5 +1,53 @@
-import urllib.request, urllib.error, urllib.parse, csv, json# ,locale
+import requests
+#import urllib.request, urllib.error, urllib.parse, csv, json# ,locale
 
+
+def get_stock_quote(self, e):
+    """
+    Fetches stock information using the Alpha Vantage API.
+    :param symbol: Stock ticker symbol (e.g., 'AAPL' for Apple Inc.)
+    :return: Dictionary containing stock information or an error message.
+    """
+    if not e.input:
+        e.output = get_stock_quote.helptext
+        return e
+    API_KEY = "SN3FJD55UUTIF6QM"  # Replace with your Alpha Vantage API key
+    BASE_URL = "https://www.alphavantage.co/query"
+    symbol = e.input
+    
+    params = {
+        "function": "TIME_SERIES_INTRADAY",
+        "symbol": symbol,
+        "interval": "5min",
+        "apikey": API_KEY
+    }
+    
+    response = requests.get(BASE_URL, params=params)
+    data = response.json()
+    
+    if "Time Series (5min)" in data:
+        latest_time = sorted(data["Time Series (5min)"].keys())[-1]
+        latest_data = data["Time Series (5min)"][latest_time]
+        
+        e.output = "[%s] Open:%s | High:%s | Low:%s | Close:%s | Volume: %s | Updated: %s" % (symbol,latest_data["1. open"],latest_data["2. high"],latest_data["3. low"],latest_data["4. close"],latest_data["5. volume"],latest_time)
+        return e
+        """return {
+            "symbol": symbol,
+            "last_updated": latest_time,
+            "open": latest_data["1. open"],
+            "high": latest_data["2. high"],
+            "low": latest_data["3. low"],
+            "close": latest_data["4. close"],
+            "volume": latest_data["5. volume"]
+        }"""
+    else:
+        e.output = "Unable to fetch stock data. Check the symbol or try again later."
+        return e
+        
+get_stock_quote.command = "!stock"
+get_stock_quote.helptext = "Usage: !stock <ticker symbol>\nExample: !stock GOOG\nShows a quote for the given ticker symbol"
+
+"""
 def get_stock_quote(self, e):
     # stock quotes from Yahoo Finance
     if not e.input:
@@ -31,9 +79,10 @@ def get_stock_quote(self, e):
        
        e.output = "[%s] %s    %s %s | Cap: %s | Volume (Avg): %s (%s)" % (stock,name.strip(),price,change,mkt_cap.strip(),volume,avg_volume)
        return e
-   
+
 get_stock_quote.command = "!stock"
 get_stock_quote.helptext = "Usage: !stock <ticker symbol>\nExample: !stock GOOG\nShows a quote for the given ticker symbol"
+"""
 
     # http://cliffngan.net/a/13
 #a     Ask             a2     Average Daily Volume     a5     Ask Size
